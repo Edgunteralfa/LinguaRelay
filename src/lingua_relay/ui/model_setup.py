@@ -84,7 +84,7 @@ class ModelSetupDialog(QDialog):
         self.profile_combo = QComboBox()
         for profile in profiles:
             suffix = ru("（推荐）") if profile.recommended else ""
-            self.profile_combo.addItem(f"{profile.label}{suffix}", profile.profile_id)
+            self.profile_combo.addItem(f"{ru(profile.label)}{suffix}", profile.profile_id)
         recommended = next(profile for profile in profiles if profile.recommended)
         self.profile_combo.setCurrentIndex(self.profile_combo.findData(recommended.profile_id))
         layout.addWidget(self.profile_combo)
@@ -140,7 +140,7 @@ class ModelSetupDialog(QDialog):
         manifest = profile.manifest
         size = manifest.total_installed_bytes / 1024**3
         self.profile_detail.setText(
-            f"{profile.summary}\n{profile.guidance}" + ru("\n预计占用 ") + f"{size:.2f}" + ru(" GiB；可随时在设置中卸载。")
+            f"{ru(profile.summary)}\n{ru(profile.guidance)}" + ru("\n预计占用 ") + f"{size:.2f}" + ru(" GiB；可随时在设置中卸载。")
         )
         self.licenses.setHtml(_license_html(manifest))
         self.detected_model_root = next(
@@ -158,7 +158,7 @@ class ModelSetupDialog(QDialog):
         else:
             self.detected_button.setToolTip("")
             self.status.setText(ru("模型安装到 LocalAppData；电脑音频默认只在本机内存中处理。"))
-        self.download_button.setText(f"{ru('下载并安装 ')}{profile.label}")
+        self.download_button.setText(f"{ru('下载并安装 ')}{ru(profile.label)}")
 
     def _download(self) -> None:
         if not self._check_consent():

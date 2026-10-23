@@ -38,7 +38,7 @@ class _DownloadWorker(QObject):
         try:
             self.model_root.mkdir(parents=True, exist_ok=True)
             for item in self.downloads:
-                self.progress.emit(f"{ru('正在下载并校验 ')}{item.label}（{item.size}）…")
+                self.progress.emit(f"{ru('正在下载并校验 ')}{item.label} ({item.size})…")
                 if item.kind == "asr":
                     self._download_asr()
                 else:
@@ -144,7 +144,7 @@ def ensure_advanced_models(
     downloads = missing_model_downloads(settings, model_root)
     if not downloads:
         return True
-    detail = "\n".join(f"• {item.label}：{item.size}" for item in downloads)
+    detail = "\n".join(f"• {item.label}: {item.size}" for item in downloads)
     answer = QMessageBox.question(
         parent,
         ru("需要安装模型"),
