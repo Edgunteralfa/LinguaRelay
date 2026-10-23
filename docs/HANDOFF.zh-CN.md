@@ -1,6 +1,14 @@
 # 当前交接记录
 
-更新：2026-10-06（Asia/Shanghai）。本页只保留最新检查点；历史需求见[项目上下文](PROJECT-CONTEXT.zh-CN.md)，状态/证据见[需求表](REQUIREMENTS.zh-CN.md)、[台账](KNOWN-ISSUES.zh-CN.md)、[验证索引](VERIFICATION.zh-CN.md)。
+更新：2026-10-24。上一检查点仍是 2026-10-06 的 0.3.3 可靠性工作；下面只记本轮本地界面改动。
+
+## 本轮：界面俄语
+
+- 目标：把桌面界面文案改成俄语，不改识别/翻译语言。语音方向仍是中文、日语、英语、韩语，共 12 个方向；没有加入俄语语音，也没有自动检测。
+- 范围：`src/lingua_relay/ui/` 的用户可见字符串经 `ru()` 显示俄语。字幕原文和译文不经过这个词典。开发文档仍是中文。
+- 验证：界面模块可以编译；每条 `ru("…")` 常量都有译文。本机没有项目 `.venv` 和 PySide6，`tests/test_overlay.py` 与 `tests/test_desktop_delivery.py` 已改期望文案，但没有实际跑过。
+- 2026-10-24 已创建本地 `.venv` 并安装 `.[runtime]`（Python 3.11）。启动入口是仓库根目录的 `LinguaRelay.bat`，命令为 `.venv\Scripts\lingua-relay app`。未做真实设备长测。
+- 未解决：没有打包，没有在真实 VooV 上试过。用系统输出捕获对方中文、源语言选手动中文、目标语言选英语，才能边听边看英语。
 
 ## 已确认范围与基线
 

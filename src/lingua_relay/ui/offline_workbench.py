@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 from lingua_relay.languages import SUPPORTED_LANGUAGES
 from lingua_relay.offline.processor import ProcessingOptions
 from lingua_relay.offline.project import Cue, OfflineProjectStore
+from lingua_relay.ui.ru import ru
 
 
 class WaveformWidget(QWidget):
@@ -83,7 +84,7 @@ class WaveformWidget(QWidget):
         painter.fillRect(self.rect(), QColor("#111827"))
         if not len(self._peaks):
             painter.setPen(QColor("#667085"))
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "音频波形")
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, ru("音频波形"))
             return
         middle = self.height() / 2
         x_scale = self.width() / max(1, len(self._peaks) - 1)
@@ -127,7 +128,7 @@ class OfflineWorkbench(QMainWindow):
         self._cancel_pending = False
         self._processing_value = 0.0
         self._processing_message = ""
-        self.setWindowTitle("LinguaRelay · 录制与离线工作台")
+        self.setWindowTitle(ru("LinguaRelay · 录制与离线工作台"))
         self.resize(1180, 720)
         if icon:
             self.setWindowIcon(icon)
@@ -146,48 +147,48 @@ class OfflineWorkbench(QMainWindow):
         root = QWidget()
         layout = QVBoxLayout(root)
         toolbar = QHBoxLayout()
-        self.audio_button = QPushButton("导入音频")
-        self.video_button = QPushButton("导入视频")
+        self.audio_button = QPushButton(ru("导入音频"))
+        self.video_button = QPushButton(ru("导入视频"))
         self.audio_button.clicked.connect(self.import_audio_requested.emit)
         self.video_button.clicked.connect(self.import_video_requested.emit)
         toolbar.addWidget(self.audio_button)
         toolbar.addWidget(self.video_button)
         toolbar.addSpacing(12)
-        toolbar.addWidget(QLabel("识别模型"))
+        toolbar.addWidget(QLabel(ru("识别模型")))
         self.model_combo = QComboBox()
-        self.model_combo.addItem("Base · 最快 / 入门电脑", "base")
-        self.model_combo.addItem("Small · 日常均衡", "small")
-        self.model_combo.addItem("Medium · 更准确", "medium")
-        self.model_combo.addItem("Large-v3 Turbo · 推荐", "large-v3-turbo")
-        self.model_combo.addItem("Large-v3 · 最高准确度", "large-v3")
+        self.model_combo.addItem(ru("Base · 最快 / 入门电脑"), "base")
+        self.model_combo.addItem(ru("Small · 日常均衡"), "small")
+        self.model_combo.addItem(ru("Medium · 更准确"), "medium")
+        self.model_combo.addItem(ru("Large-v3 Turbo · 推荐"), "large-v3-turbo")
+        self.model_combo.addItem(ru("Large-v3 · 最高准确度"), "large-v3")
         self.model_combo.setCurrentIndex(3)
         self.model_combo.setToolTip(
-            "Turbo 适合大多数电脑；Large-v3 更慢且占用更高，适合有独显或短音频精修。"
+            ru("Turbo 适合大多数电脑；Large-v3 更慢且占用更高，适合有独显或短音频精修。")
         )
         toolbar.addWidget(self.model_combo, 1)
         self.quality_combo = QComboBox()
-        self.quality_combo.addItem("快速", "fast")
-        self.quality_combo.addItem("均衡", "balanced")
-        self.quality_combo.addItem("精确", "accurate")
+        self.quality_combo.addItem(ru("快速"), "fast")
+        self.quality_combo.addItem(ru("均衡"), "balanced")
+        self.quality_combo.addItem(ru("精确"), "accurate")
         self.quality_combo.setCurrentIndex(1)
         toolbar.addWidget(self.quality_combo)
-        self.llm_checkbox = QCheckBox("大模型精修")
-        self.llm_checkbox.setToolTip("使用“用户设置 → 大模型”中配置的本地或 API 服务逐句精修")
+        self.llm_checkbox = QCheckBox(ru("大模型精修"))
+        self.llm_checkbox.setToolTip(ru("使用“用户设置 → 大模型”中配置的本地或 API 服务逐句精修"))
         toolbar.addWidget(self.llm_checkbox)
-        self.process_button = QPushButton("开始后期处理")
+        self.process_button = QPushButton(ru("开始后期处理"))
         self.process_button.clicked.connect(self._request_process)
         toolbar.addWidget(self.process_button)
-        self.cancel_button = QPushButton("取消处理")
-        self.cancel_button.setToolTip("合作式取消：等待当前模型调用结束，已保存字幕会保留。")
+        self.cancel_button = QPushButton(ru("取消处理"))
+        self.cancel_button.setToolTip(ru("合作式取消：等待当前模型调用结束，已保存字幕会保留。"))
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self._request_cancel)
         toolbar.addWidget(self.cancel_button)
-        self.export_button = QPushButton("导出…")
+        self.export_button = QPushButton(ru("导出…"))
         self.export_button.clicked.connect(self._request_export)
         toolbar.addWidget(self.export_button)
         layout.addLayout(toolbar)
         route_row = QHBoxLayout()
-        route_row.addWidget(QLabel("项目语言"))
+        route_row.addWidget(QLabel(ru("项目语言")))
         self.source_language = QComboBox()
         self.target_language = QComboBox()
         for code, language in SUPPORTED_LANGUAGES.items():
@@ -199,7 +200,7 @@ class OfflineWorkbench(QMainWindow):
         route_row.addWidget(self.source_language)
         route_row.addWidget(QLabel("→"))
         route_row.addWidget(self.target_language)
-        route_note = QLabel("处理前可单独设置；源语言仍不自动检测")
+        route_note = QLabel(ru("处理前可单独设置；源语言仍不自动检测"))
         route_note.setStyleSheet("color: #667085;")
         route_row.addWidget(route_note)
         route_row.addStretch(1)
@@ -213,7 +214,7 @@ class OfflineWorkbench(QMainWindow):
 
         detail = QWidget()
         detail_layout = QVBoxLayout(detail)
-        self.title = QLabel("请选择项目")
+        self.title = QLabel(ru("请选择项目"))
         self.title.setStyleSheet("font-size: 18px; font-weight: 600;")
         self.meta = QLabel("")
         self.meta.setStyleSheet("color: #667085;")
@@ -223,7 +224,7 @@ class OfflineWorkbench(QMainWindow):
         self.waveform.seek_requested.connect(self.player.setPosition)
         detail_layout.addWidget(self.waveform)
         transport = QHBoxLayout()
-        self.play_button = QPushButton("▶ 播放")
+        self.play_button = QPushButton(ru("▶ 播放"))
         self.play_button.clicked.connect(self._toggle_playback)
         self.position = QLabel("00:00.000 / 00:00.000")
         self.seek = QSlider(Qt.Orientation.Horizontal)
@@ -234,7 +235,7 @@ class OfflineWorkbench(QMainWindow):
         detail_layout.addLayout(transport)
 
         self.cues = QTableWidget(0, 4)
-        self.cues.setHorizontalHeaderLabels(("开始", "结束", "原文", "译文"))
+        self.cues.setHorizontalHeaderLabels((ru("开始"), ru("结束"), ru("原文"), ru("译文")))
         header = self.cues.horizontalHeader()
         header.resizeSection(0, 105)
         header.resizeSection(1, 105)
@@ -246,7 +247,7 @@ class OfflineWorkbench(QMainWindow):
         self.progress = QProgressBar()
         self.progress.setRange(0, 1000)
         self.progress.setValue(0)
-        self.progress_label = QLabel("就绪")
+        self.progress_label = QLabel(ru("就绪"))
         status_row = QHBoxLayout()
         status_row.addWidget(self.progress, 1)
         status_row.addWidget(self.progress_label)
@@ -261,7 +262,7 @@ class OfflineWorkbench(QMainWindow):
         self.player.durationChanged.connect(lambda value: self.seek.setRange(0, value))
         self.player.playbackStateChanged.connect(
             lambda state: self.play_button.setText(
-                "Ⅱ 暂停" if state == QMediaPlayer.PlaybackState.PlayingState else "▶ 播放"
+                ru("Ⅱ 暂停") if state == QMediaPlayer.PlaybackState.PlayingState else ru("▶ 播放")
             )
         )
 
@@ -309,7 +310,7 @@ class OfflineWorkbench(QMainWindow):
         self._processing_project_id = project_id
         self._cancel_pending = False
         self._processing_value = 0.01
-        self._processing_message = "正在切换到后期处理模式…"
+        self._processing_message = ru("正在切换到后期处理模式…")
         self._sync_task_controls()
         self.update_progress(project_id, 0.01, self._processing_message)
 
@@ -317,7 +318,7 @@ class OfflineWorkbench(QMainWindow):
         if project_id != self._processing_project_id:
             return
         self._cancel_pending = True
-        self._processing_message = "正在取消，等待当前操作结束…"
+        self._processing_message = ru("正在取消，等待当前操作结束…")
         self._sync_task_controls()
         if self._project_id == project_id:
             self.progress_label.setText(self._processing_message)
@@ -332,10 +333,10 @@ class OfflineWorkbench(QMainWindow):
         self.refresh(select_id=project_id)
         self._sync_task_controls()
         if error:
-            self.progress_label.setText("处理失败")
-            QMessageBox.critical(self, "后期处理失败", error)
+            self.progress_label.setText(ru("处理失败"))
+            QMessageBox.critical(self, ru("后期处理失败"), error)
         elif cancelled:
-            self.progress_label.setText("已取消；原有字幕已保留，可重新处理")
+            self.progress_label.setText(ru("已取消；原有字幕已保留，可重新处理"))
 
     def _sync_task_controls(self) -> None:
         busy = self._processing_project_id is not None
@@ -348,7 +349,7 @@ class OfflineWorkbench(QMainWindow):
             }
         self.process_button.setEnabled(has_project and not busy and not recording)
         self.cancel_button.setEnabled(busy and not self._cancel_pending)
-        self.cancel_button.setText("正在取消…" if self._cancel_pending else "取消处理")
+        self.cancel_button.setText(ru("正在取消…") if self._cancel_pending else ru("取消处理"))
         for widget in (
             self.audio_button,
             self.video_button,
@@ -449,7 +450,7 @@ class OfflineWorkbench(QMainWindow):
                 translated_text=self.cues.item(row, 3).text(),
             )
         except Exception as error:
-            self.progress_label.setText(f"编辑未保存：{error}")
+            self.progress_label.setText(f"{ru('编辑未保存：')}{error}")
 
     def _cue_clicked(self, row: int, _column: int) -> None:
         with suppress(ValueError):
@@ -473,11 +474,9 @@ class OfflineWorkbench(QMainWindow):
         project = self.store.get_project(self._project_id)
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "导出离线项目",
+            ru("导出离线项目"),
             str(Path.home() / f"{project.title}.vtt"),
-            "WebVTT (*.vtt);;SubRip (*.srt);;ASS 字幕 (*.ass);;纯文本 (*.txt);;"
-            "CSV (*.csv);;JSON Lines (*.jsonl);;MP3 音频 (*.mp3);;"
-            "WAV 音频 (*.wav);;FLAC 音频 (*.flac)",
+            ru("WebVTT (*.vtt);;SubRip (*.srt);;ASS 字幕 (*.ass);;纯文本 (*.txt);;") + ru("CSV (*.csv);;JSON Lines (*.jsonl);;MP3 音频 (*.mp3);;") + ru("WAV 音频 (*.wav);;FLAC 音频 (*.flac)"),
         )
         if path:
             self.export_requested.emit(self._project_id, path)
@@ -494,8 +493,8 @@ class OfflineWorkbench(QMainWindow):
         self.position.setText(f"{_clock(value)} / {_clock(self.player.duration())}")
 
     def _show_empty(self) -> None:
-        self.title.setText("还没有离线项目")
-        self.meta.setText("可从悬浮窗开始录制，或在此导入音频/视频。")
+        self.title.setText(ru("还没有离线项目"))
+        self.meta.setText(ru("可从悬浮窗开始录制，或在此导入音频/视频。"))
         self.cues.setRowCount(0)
         self.waveform.load(None)
         self._sync_task_controls()
@@ -513,7 +512,7 @@ def _parse_clock(value: str) -> int:
         seconds_text, millis_text = rest.split(".", 1)
         return int(minutes_text) * 60_000 + int(seconds_text) * 1000 + int(millis_text[:3])
     except (ValueError, IndexError) as error:
-        raise ValueError("时间应为 MM:SS.mmm") from error
+        raise ValueError(ru("时间应为 MM:SS.mmm")) from error
 
 
 def _duration(milliseconds: int) -> str:
@@ -522,7 +521,7 @@ def _duration(milliseconds: int) -> str:
 
 
 def _kind_label(kind: str) -> str:
-    return {"recording": "录制", "audio": "音频", "video": "视频"}.get(kind, kind)
+    return {"recording": ru("录制"), "audio": ru("音频"), "video": ru("视频")}.get(kind, kind)
 
 
 def _status_icon(status: str) -> str:
@@ -537,11 +536,11 @@ def _status_icon(status: str) -> str:
 
 def _status_label(status: str) -> str:
     return {
-        "ready": "等待处理",
-        "recording": "正在录制",
-        "recording_paused": "录制已暂停",
-        "processing": "正在后期处理",
-        "completed": "已完成",
-        "failed": "处理失败",
-        "cancelled": "已取消",
+        "ready": ru("等待处理"),
+        "recording": ru("正在录制"),
+        "recording_paused": ru("录制已暂停"),
+        "processing": ru("正在后期处理"),
+        "completed": ru("已完成"),
+        "failed": ru("处理失败"),
+        "cancelled": ru("已取消"),
     }.get(status, status)

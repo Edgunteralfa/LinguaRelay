@@ -72,7 +72,7 @@ def test_revised_caption_displays_local_or_cloud_scope() -> None:
     overlay.publish(event)
     app.processEvents()
 
-    assert "云端修正" in overlay.status.text()
+    assert "Облачная правка" in overlay.status.text()
     assert "v1" in overlay.status.text()
 
 
@@ -108,7 +108,7 @@ def test_ready_status_replaces_loading_placeholder() -> None:
     overlay.set_status("running", "正在监听系统音频")
     app.processEvents()
 
-    assert "模型已就绪" in overlay.translation.text()
+    assert "Модель готова" in overlay.translation.text()
 
 
 def test_transcript_is_visible_before_translation_finishes() -> None:
@@ -132,8 +132,8 @@ def test_transcript_is_visible_before_translation_finishes() -> None:
     app.processEvents()
 
     assert overlay.source.text() == "recognized immediately"
-    assert overlay.translation.text() == "正在翻译…"
-    assert "正在识别并翻译" in overlay.status.text()
+    assert overlay.translation.text() == "Перевод…"
+    assert "распознавание и перевод" in overlay.status.text()
 
 
 def test_caption_is_cleared_after_user_retention_time() -> None:
@@ -146,7 +146,7 @@ def test_caption_is_cleared_after_user_retention_time() -> None:
 
     assert overlay.source.text() == ""
     assert overlay.translation.text() == ""
-    assert "等待系统音频" in overlay.status.text()
+    assert "ждём системный звук" in overlay.status.text()
 
 
 def test_overlay_applies_user_fonts_colors_and_status_visibility() -> None:

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QDialog, QLabel, QMessageBox, QProgressBar, QVBoxL
 
 from lingua_relay.asr.faster_whisper import PINNED_MODEL_REVISIONS
 from lingua_relay.config import Settings
+from lingua_relay.ui.ru import ru
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,7 +38,7 @@ class _DownloadWorker(QObject):
         try:
             self.model_root.mkdir(parents=True, exist_ok=True)
             for item in self.downloads:
-                self.progress.emit(f"正在下载并校验 {item.label}（{item.size}）…")
+                self.progress.emit(f"{ru('正在下载并校验 ')}{item.label}（{item.size}）…")
                 if item.kind == "asr":
                     self._download_asr()
                 else:
@@ -89,18 +90,18 @@ class _DownloadDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.succeeded = False
-        self.setWindowTitle("安装高级模型")
+        self.setWindowTitle(ru("安装高级模型"))
         self.setModal(True)
         self.setMinimumWidth(470)
         self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
         layout = QVBoxLayout(self)
-        self.status = QLabel("正在准备下载…")
+        self.status = QLabel(ru("正在准备下载…"))
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
         progress = QProgressBar()
         progress.setRange(0, 0)
         layout.addWidget(progress)
-        note = QLabel("下载可断点续传。完成前请保持网络连接，不要退出 LinguaRelay。")
+        note = QLabel(ru("下载可断点续传。完成前请保持网络连接，不要退出 LinguaRelay。"))
         note.setWordWrap(True)
         note.setStyleSheet("color: #667085;")
         layout.addWidget(note)
@@ -129,8 +130,8 @@ class _DownloadDialog(QDialog):
     def _fail(self, detail: str) -> None:
         QMessageBox.critical(
             self,
-            "模型安装失败",
-            "模型未安装完成，原设置不会被更改。\n\n" + detail,
+            ru("模型安装失败"),
+            ru("模型未安装完成，原设置不会被更改。\n\n") + detail,
         )
         self.reject()
 
@@ -146,10 +147,10 @@ def ensure_advanced_models(
     detail = "\n".join(f"• {item.label}：{item.size}" for item in downloads)
     answer = QMessageBox.question(
         parent,
-        "需要安装模型",
-        "所选高级模型尚未安装：\n\n"
+        ru("需要安装模型"),
+        ru("所选高级模型尚未安装：\n\n")
         + detail
-        + "\n\n文件来自 Hugging Face，下载后在本地运行。是否现在安装？",
+        + ru("\n\n文件来自 Hugging Face，下载后在本地运行。是否现在安装？"),
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         QMessageBox.StandardButton.Yes,
     )
@@ -162,11 +163,11 @@ def ensure_advanced_models(
 def missing_model_downloads(settings: Settings, model_root: Path) -> tuple[ModelDownload, ...]:
     missing: list[ModelDownload] = []
     asr_sizes = {
-        "base": "约 140 MiB",
-        "small": "约 460 MiB",
-        "medium": "约 1.5 GiB",
-        "large-v3-turbo": "约 1.6 GiB",
-        "large-v3": "约 3.0 GiB",
+        "base": ru("约 140 MiB"),
+        "small": ru("约 460 MiB"),
+        "medium": ru("约 1.5 GiB"),
+        "large-v3-turbo": ru("约 1.6 GiB"),
+        "large-v3": ru("约 3.0 GiB"),
     }
     if settings.asr.model in asr_sizes and not _asr_installed(
         settings.asr.model,
@@ -184,7 +185,7 @@ def missing_model_downloads(settings: Settings, model_root: Path) -> tuple[Model
         settings.translation.model == "facebook/m2m100_1.2B"
         and not (settings.translation.model_path / "model.bin").is_file()
     ):
-        missing.append(ModelDownload("translation", "M2M100 1.2B", "约 2.5 GiB"))
+        missing.append(ModelDownload("translation", "M2M100 1.2B", ru("约 2.5 GiB")))
     return tuple(missing)
 
 

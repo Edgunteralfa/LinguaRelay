@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from lingua_relay.history import JsonlHistory, latest_history_rows
+from lingua_relay.ui.ru import ru
 
 
 class HistoryWindow(QMainWindow):
@@ -38,7 +39,7 @@ class HistoryWindow(QMainWindow):
         self.history_path = history_path
         self._rows: tuple[dict[str, object], ...] = ()
         self._visible_rows: tuple[dict[str, object], ...] = ()
-        self.setWindowTitle("LinguaRelay · 历史记录")
+        self.setWindowTitle(ru("LinguaRelay · 历史记录"))
         if icon is not None:
             self.setWindowIcon(icon)
         self.resize(1040, 700)
@@ -54,24 +55,24 @@ class HistoryWindow(QMainWindow):
 
         controls = QHBoxLayout()
         self.search = QLineEdit()
-        self.search.setPlaceholderText("搜索原文、译文或模型…")
+        self.search.setPlaceholderText(ru("搜索原文、译文或模型…"))
         self.search.setClearButtonEnabled(True)
         self.search.textChanged.connect(self._apply_filters)
         controls.addWidget(self.search, 1)
         self.route_filter = QComboBox()
-        self.route_filter.addItem("全部语言方向", "")
+        self.route_filter.addItem(ru("全部语言方向"), "")
         self.route_filter.currentIndexChanged.connect(self._apply_filters)
         controls.addWidget(self.route_filter)
         self.kind_filter = QComboBox()
-        self.kind_filter.addItem("全部结果", "")
-        self.kind_filter.addItem("本地快译", "final")
-        self.kind_filter.addItem("LLM 修正", "revised")
+        self.kind_filter.addItem(ru("全部结果"), "")
+        self.kind_filter.addItem(ru("本地快译"), "final")
+        self.kind_filter.addItem(ru("LLM 修正"), "revised")
         self.kind_filter.currentIndexChanged.connect(self._apply_filters)
         controls.addWidget(self.kind_filter)
-        refresh_button = QPushButton("刷新")
+        refresh_button = QPushButton(ru("刷新"))
         refresh_button.clicked.connect(self.refresh)
         controls.addWidget(refresh_button)
-        export_button = QPushButton("导出…")
+        export_button = QPushButton(ru("导出…"))
         export_button.clicked.connect(self.export_requested.emit)
         controls.addWidget(export_button)
         root.addLayout(controls)
@@ -82,7 +83,7 @@ class HistoryWindow(QMainWindow):
 
         splitter = QSplitter(Qt.Orientation.Vertical)
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(("时间", "方向", "原文", "译文", "结果"))
+        self.table.setHorizontalHeaderLabels((ru("时间"), ru("方向"), ru("原文"), ru("译文"), ru("结果")))
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -101,9 +102,9 @@ class HistoryWindow(QMainWindow):
         detail_layout = QVBoxLayout(detail_panel)
         detail_layout.setContentsMargins(0, 8, 0, 0)
         detail_header = QHBoxLayout()
-        detail_header.addWidget(QLabel("记录详情"))
+        detail_header.addWidget(QLabel(ru("记录详情")))
         detail_header.addStretch(1)
-        copy_button = QPushButton("复制译文")
+        copy_button = QPushButton(ru("复制译文"))
         copy_button.clicked.connect(self._copy_translation)
         detail_header.addWidget(copy_button)
         detail_layout.addLayout(detail_header)
@@ -128,7 +129,7 @@ class HistoryWindow(QMainWindow):
         )
         self.route_filter.blockSignals(True)
         self.route_filter.clear()
-        self.route_filter.addItem("全部语言方向", "")
+        self.route_filter.addItem(ru("全部语言方向"), "")
         for route in routes:
             self.route_filter.addItem(route.upper(), route)
         index = self.route_filter.findData(selected_route)
@@ -168,7 +169,7 @@ class HistoryWindow(QMainWindow):
         self.table.setRowCount(len(self._visible_rows))
         for index, row in enumerate(self._visible_rows):
             revision = int(row.get("revision") or 0)
-            kind = "LLM 修正" if row.get("state") == "revised" else "本地快译"
+            kind = ru("LLM 修正") if row.get("state") == "revised" else ru("本地快译")
             if revision:
                 kind += f" · v{revision}"
             values = (
@@ -183,11 +184,11 @@ class HistoryWindow(QMainWindow):
                 item = QTableWidgetItem(value)
                 item.setToolTip(value)
                 self.table.setItem(index, column, item)
-        self.summary.setText(f"显示 {len(self._visible_rows)} 条 · 共 {len(self._rows)} 个语音片段")
+        self.summary.setText(f"{ru('显示 ')}{len(self._visible_rows)}{ru(' 条 · 共 ')}{len(self._rows)}{ru(' 个语音片段')}")
         if self._visible_rows:
             self.table.selectRow(0)
         else:
-            self.details.setHtml("<p style='color:#667085'>没有符合条件的记录。</p>")
+            self.details.setHtml(ru("<p style='color:#667085'>没有符合条件的记录。</p>"))
 
     def _selected_row(self) -> dict[str, object] | None:
         index = self.table.currentRow()
@@ -205,12 +206,11 @@ class HistoryWindow(QMainWindow):
             f"{str(row.get('source_language') or '').upper()} → "
             f"{str(row.get('target_language') or '').upper()}"
         )
-        provider = escape(str(row.get("correction_provider") or "本地快译"))
+        provider = escape(str(row.get("correction_provider") or ru("本地快译")))
         model = escape(str(row.get("correction_model") or "—"))
         created = escape(_display_time(row.get("created_at")))
         self.details.setHtml(
-            f"<p style='color:#667085'>{created} · {route} · {provider} · {model}</p>"
-            f"<h3>原文</h3><p>{source}</p><h3>译文</h3><p>{translation}</p>"
+            f"<p style='color:#667085'>{created} · {route} · {provider} · {model}</p>" + f"<h3>{ru('原文')}</h3><p>{source}{ru('</p><h3>译文</h3><p>')}{translation}</p>"
         )
 
     def _copy_translation(self) -> None:

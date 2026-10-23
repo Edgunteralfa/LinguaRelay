@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from lingua_relay.asr.types import AsrEvent
 from lingua_relay.config import OverlaySettings, Settings
 from lingua_relay.events import CaptionEvent
+from lingua_relay.ui.ru import ru
 
 
 class CaptionOverlay(QWidget):
@@ -65,26 +66,26 @@ class CaptionOverlay(QWidget):
         self.frame.setObjectName("captionFrame")
         self.frame.setMouseTracking(True)
         self.frame.installEventFilter(self)
-        self.status = QLabel("LINGUARELAY · 正在准备")
-        self.status.setToolTip("拖动窗口移动；拖动边缘或四角缩放")
+        self.status = QLabel(ru("LINGUARELAY · 正在准备"))
+        self.status.setToolTip(ru("拖动窗口移动；拖动边缘或四角缩放"))
         self.status.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
         self.status.setStyleSheet("color: #77d6a5;")
-        self.pause_button = self._tool_button("Ⅱ", "暂停 / 继续实时字幕")
+        self.pause_button = self._tool_button("Ⅱ", ru("暂停 / 继续实时字幕"))
         self.pause_button.clicked.connect(self.pause_requested.emit)
-        self.record_button = self._tool_button("●", "开始录制当前音频源")
+        self.record_button = self._tool_button("●", ru("开始录制当前音频源"))
         self.record_button.clicked.connect(self.record_requested.emit)
-        self.record_pause_button = self._tool_button("Ⅱ", "暂停录制")
+        self.record_pause_button = self._tool_button("Ⅱ", ru("暂停录制"))
         self.record_pause_button.clicked.connect(self.recording_pause_requested.emit)
         self.record_pause_button.hide()
-        self.display_button = self._tool_button("双", "切换仅译文 / 双语显示")
+        self.display_button = self._tool_button(ru("双"), ru("切换仅译文 / 双语显示"))
         self.display_button.clicked.connect(self.display_mode_requested.emit)
-        self.workbench_button = self._tool_button("辑", "打开录制与离线工作台")
+        self.workbench_button = self._tool_button(ru("辑"), ru("打开录制与离线工作台"))
         self.workbench_button.clicked.connect(self.workbench_requested.emit)
-        self.history_button = self._tool_button("历", "打开字幕历史")
+        self.history_button = self._tool_button(ru("历"), ru("打开字幕历史"))
         self.history_button.clicked.connect(self.history_requested.emit)
-        self.settings_button = self._tool_button("设", "打开用户设置")
+        self.settings_button = self._tool_button(ru("设"), ru("打开用户设置"))
         self.settings_button.clicked.connect(self.settings_requested.emit)
-        self.hide_button = self._tool_button("×", "隐藏悬浮窗（Ctrl+Alt+L 恢复）")
+        self.hide_button = self._tool_button("×", ru("隐藏悬浮窗（Ctrl+Alt+L 恢复）"))
         self.hide_button.clicked.connect(self.hide_requested.emit)
         self.control_buttons = (
             self.pause_button,
@@ -105,7 +106,7 @@ class CaptionOverlay(QWidget):
             header_layout.addWidget(button)
         self.source = QLabel("")
         self.source.setWordWrap(True)
-        self.translation = QLabel("正在加载模型…")
+        self.translation = QLabel(ru("正在加载模型…"))
         self.translation.setWordWrap(True)
         for label in (self.status, self.source, self.translation):
             label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
@@ -145,7 +146,7 @@ class CaptionOverlay(QWidget):
             )
         )
         self.status.setVisible(settings.status_visible)
-        self.display_button.setText("双" if settings.display_mode == "bilingual" else "译")
+        self.display_button.setText(ru("双") if settings.display_mode == "bilingual" else ru("译"))
         for button in self.control_buttons:
             button.setVisible(not settings.click_through)
         self.record_pause_button.setVisible(
@@ -180,20 +181,20 @@ class CaptionOverlay(QWidget):
 
     def set_paused(self, paused: bool) -> None:
         self.pause_button.setText("▶" if paused else "Ⅱ")
-        self.pause_button.setToolTip("继续实时字幕" if paused else "暂停实时字幕")
+        self.pause_button.setToolTip(ru("继续实时字幕") if paused else ru("暂停实时字幕"))
 
     def set_recording_state(self, state: str) -> None:
         active = state in {"recording", "paused"}
         paused = state == "paused"
         self.record_button.setProperty("recording", active)
         self.record_button.setText("■" if active else "●")
-        self.record_button.setToolTip("结束录制并开始后期处理" if active else "开始录制当前音频源")
+        self.record_button.setToolTip(ru("结束录制并开始后期处理") if active else ru("开始录制当前音频源"))
         self.record_button.setStyleSheet(
             self._button_style("#ff6577" if active else "rgba(255,255,255,190)")
         )
         self.record_pause_button.setVisible(active and not self.settings.click_through)
         self.record_pause_button.setText("▶" if paused else "Ⅱ")
-        self.record_pause_button.setToolTip("继续录制" if paused else "暂停录制")
+        self.record_pause_button.setToolTip(ru("继续录制") if paused else ru("暂停录制"))
 
     def set_status(self, state: str, message: str) -> None:
         colors = {
@@ -211,6 +212,7 @@ class CaptionOverlay(QWidget):
             "circuit_open": "#f2c66d",
             "error": "#ff7d8b",
         }
+        message = ru(message)
         self.status.setStyleSheet(f"color: {colors.get(state, '#b8c1d1')};")
         self.status.setText(f"LINGUARELAY · {message}")
         if state in {"overloaded", "stop_timeout"}:
@@ -223,7 +225,7 @@ class CaptionOverlay(QWidget):
                     self._text_style(self.settings.translation_color, 0.7)
                 )
             elif state in {"ready", "running"}:
-                self.translation.setText("模型已就绪，等待系统音频…")
+                self.translation.setText(ru("模型已就绪，等待系统音频…"))
                 self.translation.setStyleSheet(
                     self._text_style(self.settings.translation_color, 0.76)
                 )
@@ -258,10 +260,10 @@ class CaptionOverlay(QWidget):
         self.source.setVisible(self.settings.display_mode == "bilingual")
         self.source.setStyleSheet(self._text_style(self.settings.source_color, 0.7))
         if new_segment:
-            self.translation.setText("正在翻译…")
+            self.translation.setText(ru("正在翻译…"))
             self.translation.setStyleSheet(self._text_style(self.settings.translation_color, 0.65))
         route = f"{event.language.upper()} → {target_language.upper()}"
-        self.set_status("processing", route + " · 正在识别并翻译")
+        self.set_status("processing", route + ru(" · 正在识别并翻译"))
         self._arm_retention_timer()
 
     def publish(self, event: CaptionEvent) -> None:
@@ -286,12 +288,12 @@ class CaptionOverlay(QWidget):
         route = f"{event.source_language.upper()} → {event.target_language.upper()}"
         if event.state == "revised":
             scope = {
-                "local": "本地修正",
-                "cloud": "云端修正",
-            }.get(event.processing_scope, "修正译文")
+                "local": ru("本地修正"),
+                "cloud": ru("云端修正"),
+            }.get(event.processing_scope, ru("修正译文"))
             suffix = f" · {scope} · v{event.revision}"
         else:
-            suffix = " · 翻译失败，显示原文" if fallback else " · 本地快译"
+            suffix = ru(" · 翻译失败，显示原文") if fallback else ru(" · 本地快译")
         self.set_status("error" if fallback else "running", route + suffix)
         self.source.setVisible(self.settings.display_mode == "bilingual")
         self._arm_retention_timer()
@@ -303,7 +305,7 @@ class CaptionOverlay(QWidget):
         self._active_segment_id = None
         self.source.clear()
         self.translation.clear()
-        self.status.setText("LINGUARELAY · 等待系统音频")
+        self.status.setText(ru("LINGUARELAY · 等待系统音频"))
         self.status.setStyleSheet("color: #77d6a5;")
 
     def _arm_retention_timer(self) -> None:
@@ -501,10 +503,10 @@ def _rgba(color: QColor) -> str:
 
 def run_demo(settings: Settings) -> int:
     examples = (
-        ("en", "zh", "The fast path never waits for an LLM.", "实时链路不会等待大模型。"),
-        ("ja", "ko", "字幕表示を切り替えます。", "자막 표시를 전환합니다."),
-        ("zh", "en", "音频只在本机内存中处理。", "Audio is processed in local memory."),
-        ("ko", "ja", "번역이 실패해도 원문은 남습니다.", "翻訳に失敗しても原文は残ります。"),
+        ("en", "zh", "The fast path never waits for an LLM.", ru("实时链路不会等待大模型。")),
+        ("ja", "ko", ru("字幕表示を切り替えます。"), "자막 표시를 전환합니다."),
+        ("zh", "en", ru("音频只在本机内存中处理。"), "Audio is processed in local memory."),
+        ("ko", "ja", "번역이 실패해도 원문은 남습니다.", ru("翻訳に失敗しても原文は残ります。")),
     )
     app = QApplication.instance() or QApplication(sys.argv)
     overlay = CaptionOverlay(settings.overlay)

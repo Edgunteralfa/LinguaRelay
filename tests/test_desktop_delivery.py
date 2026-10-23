@@ -46,7 +46,7 @@ def test_controller_rejects_late_running_status_after_overload():
     try:
         controller._publish_status("overloaded", "字幕过载，录制继续")
         controller._publish_status("running", "旧运行状态")
-        assert "字幕过载" in controller.overlay.status.text()
+        assert "Субтитры перегружены" in controller.overlay.status.text()
         assert controller.overlay.pause_button.text() == "▶"
         app.processEvents()
     finally:

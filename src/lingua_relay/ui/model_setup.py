@@ -31,6 +31,7 @@ from lingua_relay.model_pack import (
     model_files_status,
     model_pack_status,
 )
+from lingua_relay.ui.ru import ru
 
 
 class _InstallThread(QThread):
@@ -72,18 +73,17 @@ class ModelSetupDialog(QDialog):
         self._thread: _InstallThread | None = None
         self.candidate_roots = tuple(candidate_roots)
         self.detected_model_root: Path | None = None
-        self.setWindowTitle("LinguaRelay 首次启动")
+        self.setWindowTitle(ru("LinguaRelay 首次启动"))
         self.setMinimumWidth(680)
         layout = QVBoxLayout(self)
         intro = QLabel(
-            "请选择适合电脑性能的本地模型。两种方案都支持中文、日语、英语、韩语互译；"
-            "模型只需安装一次，LinguaRelay 会优先检测并复用已有文件。"
+            ru("请选择适合电脑性能的本地模型。两种方案都支持中文、日语、英语、韩语互译；") + ru("模型只需安装一次，LinguaRelay 会优先检测并复用已有文件。")
         )
         intro.setWordWrap(True)
         layout.addWidget(intro)
         self.profile_combo = QComboBox()
         for profile in profiles:
-            suffix = "（推荐）" if profile.recommended else ""
+            suffix = ru("（推荐）") if profile.recommended else ""
             self.profile_combo.addItem(f"{profile.label}{suffix}", profile.profile_id)
         recommended = next(profile for profile in profiles if profile.recommended)
         self.profile_combo.setCurrentIndex(self.profile_combo.findData(recommended.profile_id))
@@ -96,31 +96,31 @@ class ModelSetupDialog(QDialog):
         self.licenses.setOpenExternalLinks(True)
         self.licenses.setMaximumHeight(160)
         layout.addWidget(self.licenses)
-        self.consent = QCheckBox("我已阅读并接受上述模型许可证")
+        self.consent = QCheckBox(ru("我已阅读并接受上述模型许可证"))
         layout.addWidget(self.consent)
-        self.status = QLabel("模型会安装到用户 LocalAppData，不会上传电脑音频。")
+        self.status = QLabel(ru("模型会安装到用户 LocalAppData，不会上传电脑音频。"))
         layout.addWidget(self.status)
         self.progress = QProgressBar()
         self.progress.setRange(0, 1000)
         self.progress.setValue(0)
         layout.addWidget(self.progress)
-        self.download_button = QPushButton("下载并安装模型")
+        self.download_button = QPushButton(ru("下载并安装模型"))
         self.download_button.clicked.connect(self._download)
         layout.addWidget(self.download_button)
-        self.detected_button = QPushButton("验证并使用已检测到的本地模型")
+        self.detected_button = QPushButton(ru("验证并使用已检测到的本地模型"))
         self.detected_button.clicked.connect(self._use_detected_directory)
         self.detected_button.setVisible(self.detected_model_root is not None)
         if self.detected_model_root is not None:
             self.detected_button.setToolTip(str(self.detected_model_root))
-            self.status.setText(f"检测到本地模型：{self.detected_model_root}")
+            self.status.setText(f"{ru('检测到本地模型：')}{self.detected_model_root}")
         layout.addWidget(self.detected_button)
-        self.directory_button = QPushButton("选择已有模型目录…")
+        self.directory_button = QPushButton(ru("选择已有模型目录…"))
         self.directory_button.clicked.connect(self._choose_directory)
         layout.addWidget(self.directory_button)
-        self.local_button = QPushButton("从已下载的模型 ZIP 安装…")
+        self.local_button = QPushButton(ru("从已下载的模型 ZIP 安装…"))
         self.local_button.clicked.connect(self._choose_local)
         layout.addWidget(self.local_button)
-        self.cancel_button = QPushButton("退出")
+        self.cancel_button = QPushButton(ru("退出"))
         self.cancel_button.clicked.connect(self.reject)
         layout.addWidget(self.cancel_button)
         self.profile_combo.currentIndexChanged.connect(self._refresh_profile)
@@ -140,7 +140,7 @@ class ModelSetupDialog(QDialog):
         manifest = profile.manifest
         size = manifest.total_installed_bytes / 1024**3
         self.profile_detail.setText(
-            f"{profile.summary}\n{profile.guidance}\n预计占用 {size:.2f} GiB；可随时在设置中卸载。"
+            f"{profile.summary}\n{profile.guidance}" + ru("\n预计占用 ") + f"{size:.2f}" + ru(" GiB；可随时在设置中卸载。")
         )
         self.licenses.setHtml(_license_html(manifest))
         self.detected_model_root = next(
@@ -154,11 +154,11 @@ class ModelSetupDialog(QDialog):
         self.detected_button.setVisible(self.detected_model_root is not None)
         if self.detected_model_root is not None:
             self.detected_button.setToolTip(str(self.detected_model_root))
-            self.status.setText(f"检测到可复用的完整模型：{self.detected_model_root}")
+            self.status.setText(f"{ru('检测到可复用的完整模型：')}{self.detected_model_root}")
         else:
             self.detected_button.setToolTip("")
-            self.status.setText("模型安装到 LocalAppData；电脑音频默认只在本机内存中处理。")
-        self.download_button.setText(f"下载并安装 {profile.label}")
+            self.status.setText(ru("模型安装到 LocalAppData；电脑音频默认只在本机内存中处理。"))
+        self.download_button.setText(f"{ru('下载并安装 ')}{profile.label}")
 
     def _download(self) -> None:
         if not self._check_consent():
@@ -178,7 +178,7 @@ class ModelSetupDialog(QDialog):
             return
         selected, _ = QFileDialog.getOpenFileName(
             self,
-            "选择 LinguaRelay 模型包",
+            ru("选择 LinguaRelay 模型包"),
             str(self.download_dir),
             "ZIP archives (*.zip)",
         )
@@ -201,7 +201,7 @@ class ModelSetupDialog(QDialog):
             return
         selected = QFileDialog.getExistingDirectory(
             self,
-            "选择包含完整 LinguaRelay 模型的目录",
+            ru("选择包含完整 LinguaRelay 模型的目录"),
             str(self.download_dir.parent),
         )
         if selected:
@@ -216,14 +216,14 @@ class ModelSetupDialog(QDialog):
         def operation(progress: Callable[[int, int, str], None]) -> None:
             status = adopt_existing_models(root, profile.manifest, progress)
             if not status.ready:
-                raise ValueError(status.error or "所选目录不是完整、匹配的模型包")
+                raise ValueError(status.error or ru("所选目录不是完整、匹配的模型包"))
 
         self._start(operation, selected_model_root=root, profile=profile)
 
     def _check_consent(self) -> bool:
         if self.consent.isChecked():
             return True
-        QMessageBox.information(self, "需要确认", "请先阅读模型许可证并勾选确认。")
+        QMessageBox.information(self, ru("需要确认"), ru("请先阅读模型许可证并勾选确认。"))
         return False
 
     def _start(
@@ -249,7 +249,7 @@ class ModelSetupDialog(QDialog):
     def _on_success(self) -> None:
         if self._thread is not None:
             self._thread.wait()
-        self.status.setText("模型安装与完整性校验已完成。")
+        self.status.setText(ru("模型安装与完整性校验已完成。"))
         self.progress.setValue(1000)
         self.selected_model_root = self._pending_model_root
         self.selected_profile = self._pending_profile
@@ -259,8 +259,8 @@ class ModelSetupDialog(QDialog):
         if self._thread is not None:
             self._thread.wait()
         self._set_busy(False)
-        self.status.setText("安装失败，可重试或选择已下载的 ZIP。")
-        QMessageBox.critical(self, "模型安装失败", message)
+        self.status.setText(ru("安装失败，可重试或选择已下载的 ZIP。"))
+        QMessageBox.critical(self, ru("模型安装失败"), message)
 
     def _set_busy(self, busy: bool) -> None:
         self.consent.setEnabled(not busy)
@@ -288,9 +288,9 @@ def ensure_model_pack(
     model_name = str(asr_license.get("name", "small")).rsplit("-", 1)[-1]
     profile = ModelProfile(
         profile_id="standard",
-        label="标准模型",
-        summary="固定版本的语音识别与翻译模型。",
-        guidance="适合大多数电脑。",
+        label=ru("标准模型"),
+        summary=ru("固定版本的语音识别与翻译模型。"),
+        guidance=ru("适合大多数电脑。"),
         asr_model=model_name,
         recommended=True,
         manifest_path=Path(manifest_path),
@@ -402,6 +402,5 @@ def _license_html(manifest: ModelPackManifest) -> str:
         for item in manifest.licenses
     )
     return (
-        "<p>模型权重由各上游项目授权，应用本身使用 MIT 许可证。"
-        "安装即表示你按相应许可证使用模型：</p><ul>" + rows + "</ul>"
+        ru("<p>模型权重由各上游项目授权，应用本身使用 MIT 许可证。") + ru("安装即表示你按相应许可证使用模型：</p><ul>") + rows + "</ul>"
     )

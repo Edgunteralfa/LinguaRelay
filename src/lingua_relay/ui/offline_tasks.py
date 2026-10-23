@@ -20,6 +20,7 @@ from lingua_relay.offline import (
 from lingua_relay.service import RealtimeCaptionService
 from lingua_relay.ui.advanced_models import ensure_advanced_models
 from lingua_relay.ui.offline_workbench import OfflineWorkbench
+from lingua_relay.ui.ru import ru
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,14 +56,14 @@ class OfflineWorker(QObject):
 
     def _check_cancelled(self) -> None:
         if self.cancelled.is_set():
-            raise InterruptedError("处理已取消")
+            raise InterruptedError(ru("处理已取消"))
 
     @Slot()
     def run(self) -> None:
         service_stopped = False
         restore_realtime = False
         was_paused = False
-        result = OfflineTaskResult(self.project_id, "failed", "后期任务未完成")
+        result = OfflineTaskResult(self.project_id, "failed", ru("后期任务未完成"))
         try:
             self._check_cancelled()
             original_state = self.service.snapshot().state
@@ -98,7 +99,7 @@ class OfflineWorker(QObject):
                     try:
                         self.service.start(paused=was_paused)
                     except Exception as error:
-                        detail = f"恢复实时字幕失败：{type(error).__name__}: {error}"
+                        detail = f"{ru('恢复实时字幕失败：')}{type(error).__name__}: {error}"
                         if result.detail:
                             detail = f"{result.detail}\n{detail}"
                         result = OfflineTaskResult(self.project_id, "failed", detail)
@@ -152,7 +153,7 @@ class OfflineTasksMixin:
 
     def _warn_offline_busy(self) -> None:
         QMessageBox.information(
-            None, "后期处理进行中", "请等待当前任务完成，或先在工作台取消任务。"
+            None, ru("后期处理进行中"), ru("请等待当前任务完成，或先在工作台取消任务。")
         )
 
     def toggle_recording(self) -> None:
@@ -163,7 +164,7 @@ class OfflineTasksMixin:
             try:
                 self.service.stop_recording()
             except Exception as error:
-                QMessageBox.critical(None, "无法结束录制", str(error))
+                QMessageBox.critical(None, ru("无法结束录制"), str(error))
                 return
             if snapshot.recording_project_id:
                 self.show_workbench(select_id=snapshot.recording_project_id)
@@ -176,10 +177,10 @@ class OfflineTasksMixin:
             return
         # Audio capture is independent of realtime model loading/readiness.
         source_label = {
-            "system": "系统音频",
-            "microphone": "麦克风",
-            "process": self.settings.audio.process_name.strip() or "进程音频",
-        }.get(self.settings.audio.source, "音频")
+            "system": ru("系统音频"),
+            "microphone": ru("麦克风"),
+            "process": self.settings.audio.process_name.strip() or ru("进程音频"),
+        }.get(self.settings.audio.source, ru("音频"))
         project = self.project_store.create_project(
             title=f"{datetime.now():%Y-%m-%d %H-%M-%S} · {source_label}",
             kind="recording",
@@ -190,7 +191,7 @@ class OfflineTasksMixin:
             self.service.start_recording(RecordingSession(self.project_store, project.id))
         except Exception as error:
             self.project_store.update_project(project.id, status="failed", error=str(error))
-            QMessageBox.critical(None, "无法开始录制", str(error))
+            QMessageBox.critical(None, ru("无法开始录制"), str(error))
 
     def toggle_recording_pause(self) -> None:
         state = self.service.snapshot().recording_state
@@ -200,7 +201,7 @@ class OfflineTasksMixin:
             elif state == "paused":
                 self.service.resume_recording()
         except Exception as error:
-            QMessageBox.warning(None, "录制状态切换失败", str(error))
+            QMessageBox.warning(None, ru("录制状态切换失败"), str(error))
 
     def show_workbench(self, *, select_id: str | None = None) -> None:
         viewer = getattr(self, "_offline_workbench", None)
@@ -224,21 +225,21 @@ class OfflineTasksMixin:
             self._warn_offline_busy()
             return
         if self.service.snapshot().recording_state in {"recording", "paused"}:
-            QMessageBox.warning(None, "正在录制", "请先结束录制，再导入媒体运行后期处理。")
+            QMessageBox.warning(None, ru("正在录制"), ru("请先结束录制，再导入媒体运行后期处理。"))
             return
         if kind == "video":
-            title = "导入视频"
-            file_filter = "视频文件 (*.mp4 *.mkv *.mov *.avi *.webm *.m4v);;所有文件 (*)"
+            title = ru("导入视频")
+            file_filter = ru("视频文件 (*.mp4 *.mkv *.mov *.avi *.webm *.m4v);;所有文件 (*)")
         else:
-            title = "导入音频"
-            file_filter = "音频文件 (*.wav *.mp3 *.flac *.m4a *.aac *.ogg *.opus);;所有文件 (*)"
+            title = ru("导入音频")
+            file_filter = ru("音频文件 (*.wav *.mp3 *.flac *.m4a *.aac *.ogg *.opus);;所有文件 (*)")
         path, _ = QFileDialog.getOpenFileName(None, title, str(Path.home()), file_filter)
         if not path:
             return
         try:
             info = probe_media(path)
             if kind == "video" and not info.has_video:
-                raise ValueError("所选文件不包含视频轨，请使用“导入音频”")
+                raise ValueError(ru("所选文件不包含视频轨，请使用“导入音频”"))
             project = self.project_store.create_project(
                 title=Path(path).stem,
                 kind=kind,
@@ -248,7 +249,7 @@ class OfflineTasksMixin:
             )
             self.project_store.update_project(project.id, duration_ms=info.duration_ms)
         except Exception as error:
-            QMessageBox.critical(None, "无法导入媒体", str(error))
+            QMessageBox.critical(None, ru("无法导入媒体"), str(error))
             return
         self.show_workbench(select_id=project.id)
         self._start_offline_processing(project.id, self._offline_workbench.processing_options())
@@ -260,7 +261,7 @@ class OfflineTasksMixin:
             self._warn_offline_busy()
             return
         if self.service.snapshot().recording_state in {"recording", "paused"}:
-            QMessageBox.warning(None, "正在录制", "请先结束录制，再运行后期处理。")
+            QMessageBox.warning(None, ru("正在录制"), ru("请先结束录制，再运行后期处理。"))
             return
         candidate = replace(
             self.settings, asr=replace(self.settings.asr, model=options.asr_model, revision="")
@@ -320,7 +321,7 @@ class OfflineTasksMixin:
         self._offline_relay = None
         if self._shutting_down:
             return
-        result = worker.result or OfflineTaskResult(worker.project_id, "failed", "任务意外结束")
+        result = worker.result or OfflineTaskResult(worker.project_id, "failed", ru("任务意外结束"))
         viewer = getattr(self, "_offline_workbench", None)
         if viewer is not None:
             viewer.processing_finished(
@@ -329,7 +330,7 @@ class OfflineTasksMixin:
         if result.status == "completed":
             self.tray.showMessage(
                 "LinguaRelay",
-                "后期识别与翻译已完成，可以查看、编辑或导出字幕。",
+                ru("后期识别与翻译已完成，可以查看、编辑或导出字幕。"),
                 QSystemTrayIcon.MessageIcon.Information,
             )
 
@@ -337,10 +338,10 @@ class OfflineTasksMixin:
         try:
             export_project(self.project_store, project_id, path)
         except Exception as error:
-            QMessageBox.critical(None, "导出失败", str(error))
+            QMessageBox.critical(None, ru("导出失败"), str(error))
         else:
             self.tray.showMessage(
-                "LinguaRelay", f"已导出：{Path(path).name}", QSystemTrayIcon.MessageIcon.Information
+                "LinguaRelay", f"{ru('已导出：')}{Path(path).name}", QSystemTrayIcon.MessageIcon.Information
             )
 
     def _shutdown_offline_tasks(self) -> None:

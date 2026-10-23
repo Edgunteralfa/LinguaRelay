@@ -51,6 +51,7 @@ from lingua_relay.ui.history_view import HistoryWindow
 from lingua_relay.ui.model_setup import ensure_model_installation
 from lingua_relay.ui.offline_tasks import OfflineTasksMixin
 from lingua_relay.ui.overlay import CaptionOverlay
+from lingua_relay.ui.ru import ru
 from lingua_relay.ui.settings_view import SettingsDialog
 from lingua_relay.updates import UpdateInfo, check_for_update
 
@@ -203,7 +204,7 @@ class DesktopController(OfflineTasksMixin):
                 self.project_store.update_project(
                     project.id,
                     status="failed",
-                    error=f"录音恢复失败：{error}",
+                    error=f"{ru('录音恢复失败：')}{error}",
                 )
             else:
                 recovered.append(project.id)
@@ -248,31 +249,31 @@ class DesktopController(OfflineTasksMixin):
         )
 
     def _build_menu(self) -> None:
-        self.pause_action = QAction("暂停", self.menu)
+        self.pause_action = QAction(ru("暂停"), self.menu)
         self.pause_action.triggered.connect(self.toggle_pause)
         self.menu.addAction(self.pause_action)
-        self.record_action = QAction("开始录制", self.menu)
+        self.record_action = QAction(ru("开始录制"), self.menu)
         self.record_action.triggered.connect(self.toggle_recording)
         self.menu.addAction(self.record_action)
-        self.record_pause_action = QAction("暂停录制", self.menu)
+        self.record_pause_action = QAction(ru("暂停录制"), self.menu)
         self.record_pause_action.triggered.connect(self.toggle_recording_pause)
         self.record_pause_action.setEnabled(False)
         self.menu.addAction(self.record_pause_action)
-        self.menu.addAction("录制与离线工作台…", self.show_workbench)
-        self.show_action = QAction("隐藏悬浮窗", self.menu)
+        self.menu.addAction(ru("录制与离线工作台…"), self.show_workbench)
+        self.show_action = QAction(ru("隐藏悬浮窗"), self.menu)
         self.show_action.triggered.connect(self.toggle_overlay)
         self.menu.addAction(self.show_action)
         self.menu.addSeparator()
 
-        self.source_menu = self.menu.addMenu("源语言（手动）")
-        self.target_menu = self.menu.addMenu("目标语言")
+        self.source_menu = self.menu.addMenu(ru("源语言（手动）"))
+        self.target_menu = self.menu.addMenu(ru("目标语言"))
         self._populate_languages(self.source_menu, source=True)
         self._populate_languages(self.target_menu, source=False)
 
-        display_menu = self.menu.addMenu("字幕显示")
+        display_menu = self.menu.addMenu(ru("字幕显示"))
         display_group = QActionGroup(display_menu)
         self.display_actions: dict[str, QAction] = {}
-        for mode, label in (("translated", "仅显示译文"), ("bilingual", "双语同时显示")):
+        for mode, label in (("translated", ru("仅显示译文")), ("bilingual", ru("双语同时显示"))):
             action = display_menu.addAction(label)
             action.setCheckable(True)
             action.setChecked(self.settings.overlay.display_mode == mode)
@@ -281,20 +282,20 @@ class DesktopController(OfflineTasksMixin):
             )
             display_group.addAction(action)
             self.display_actions[mode] = action
-        self.click_action = display_menu.addAction("点击穿透")
+        self.click_action = display_menu.addAction(ru("点击穿透"))
         self.click_action.setCheckable(True)
         self.click_action.setChecked(self.settings.overlay.click_through)
         self.click_action.triggered.connect(self.set_click_through)
-        display_menu.addAction("重置悬浮窗位置和大小", self.overlay.reset_geometry)
-        self.menu.addAction("用户设置…", self.show_settings)
+        display_menu.addAction(ru("重置悬浮窗位置和大小"), self.overlay.reset_geometry)
+        self.menu.addAction(ru("用户设置…"), self.show_settings)
 
-        correction_menu = self.menu.addMenu("大模型修正")
+        correction_menu = self.menu.addMenu(ru("大模型修正"))
         correction_group = QActionGroup(correction_menu)
         self.correction_actions: dict[str, QAction] = {}
         for mode, label in (
-            ("off", "关闭（仅本地快译）"),
-            ("asynchronous", "完整句异步修正"),
-            ("live", "实时异步修正（含临时字幕）"),
+            ("off", ru("关闭（仅本地快译）")),
+            ("asynchronous", ru("完整句异步修正")),
+            ("live", ru("实时异步修正（含临时字幕）")),
         ):
             action = correction_menu.addAction(label)
             action.setCheckable(True)
@@ -305,35 +306,35 @@ class DesktopController(OfflineTasksMixin):
             correction_group.addAction(action)
             self.correction_actions[mode] = action
         scope = {
-            "none": "未配置 provider",
-            "local": "本地处理（不上传字幕）",
-            "openai_compatible": "云端传输（字幕将发送至配置的 API）",
+            "none": ru("未配置 provider"),
+            "local": ru("本地处理（不上传字幕）"),
+            "openai_compatible": ru("云端传输（字幕将发送至配置的 API）"),
         }[self.settings.correction.provider]
         self.correction_scope_action = correction_menu.addAction(scope)
         self.correction_scope_action.setEnabled(False)
 
-        self.device_menu = self.menu.addMenu("音频源")
+        self.device_menu = self.menu.addMenu(ru("音频源"))
         self.device_menu.aboutToShow.connect(self._refresh_devices)
-        history_menu = self.menu.addMenu("历史记录")
-        history_menu.addAction("查看最近记录", self.show_history)
-        history_menu.addAction("导出…", self.export_history)
-        storage_menu = self.menu.addMenu("模型与卸载")
-        storage_menu.addAction("删除本地模型并退出…", self.remove_local_models)
-        storage_menu.addAction("卸载 LinguaRelay…", self.uninstall_application)
-        self.status_action = QAction("状态：正在准备", self.menu)
+        history_menu = self.menu.addMenu(ru("历史记录"))
+        history_menu.addAction(ru("查看最近记录"), self.show_history)
+        history_menu.addAction(ru("导出…"), self.export_history)
+        storage_menu = self.menu.addMenu(ru("模型与卸载"))
+        storage_menu.addAction(ru("删除本地模型并退出…"), self.remove_local_models)
+        storage_menu.addAction(ru("卸载 LinguaRelay…"), self.uninstall_application)
+        self.status_action = QAction(ru("状态：正在准备"), self.menu)
         self.status_action.setEnabled(False)
         self.menu.addAction(self.status_action)
         self.bridge.status.connect(self._update_status_action)
-        self.correction_status_action = QAction("修正：正在准备", self.menu)
+        self.correction_status_action = QAction(ru("修正：正在准备"), self.menu)
         self.correction_status_action.setEnabled(False)
         self.menu.addAction(self.correction_status_action)
         self.bridge.correction_status.connect(self._update_correction_status)
-        self.menu.addAction("检查更新", lambda: self.check_updates(manual=True))
-        self.release_action = self.menu.addAction("打开发布页面", self.open_release_page)
+        self.menu.addAction(ru("检查更新"), lambda: self.check_updates(manual=True))
+        self.release_action = self.menu.addAction(ru("打开发布页面"), self.open_release_page)
         self.release_action.setEnabled(False)
-        self.menu.addAction("关于 LinguaRelay", self.show_about)
+        self.menu.addAction(ru("关于 LinguaRelay"), self.show_about)
         self.menu.addSeparator()
-        self.menu.addAction("退出", self.app.quit)
+        self.menu.addAction(ru("退出"), self.app.quit)
 
     def _populate_languages(self, menu: QMenu, *, source: bool) -> None:
         group = QActionGroup(menu)
@@ -535,32 +536,32 @@ class DesktopController(OfflineTasksMixin):
             try:
                 self.service.set_audio_source(updated.audio)
             except Exception as error:
-                restart_reasons.append(f"音频源（切换失败：{error}）")
+                restart_reasons.append(f"{ru('音频源（切换失败：')}{error}）")
         if previous.asr != updated.asr:
-            restart_reasons.append("实时识别参数")
+            restart_reasons.append(ru("实时识别参数"))
         if previous.translation != updated.translation:
-            restart_reasons.append("翻译模型参数")
+            restart_reasons.append(ru("翻译模型参数"))
         if previous.app.history_enabled != updated.app.history_enabled:
-            restart_reasons.append("历史记录开关")
+            restart_reasons.append(ru("历史记录开关"))
         previous_provider = replace(previous.correction, mode=updated.correction.mode)
         correction_runtime_changed = previous_provider != updated.correction
         if correction_runtime_changed:
-            restart_reasons.append("大模型服务")
-            self.correction_scope_action.setText("大模型新配置将在重启后生效")
+            restart_reasons.append(ru("大模型服务"))
+            self.correction_scope_action.setText(ru("大模型新配置将在重启后生效"))
         elif previous.correction.mode != updated.correction.mode:
             try:
                 self.service.set_correction_mode(updated.correction.mode)
             except ValueError:
-                restart_reasons.append("大模型修正方式")
+                restart_reasons.append(ru("大模型修正方式"))
             else:
                 self.correction_actions[updated.correction.mode].setChecked(True)
         if restart_reasons:
             QMessageBox.information(
                 None,
-                "设置已保存",
-                "字幕外观与语言已立即应用。"
+                ru("设置已保存"),
+                ru("字幕外观与语言已立即应用。")
                 + "、".join(restart_reasons)
-                + "将在下次启动 LinguaRelay 时生效。",
+                + ru("将在下次启动 LinguaRelay 时生效。"),
             )
 
     def _persist_overlay_geometry(self, x: int, y: int, width: int, height: int) -> None:
@@ -588,7 +589,7 @@ class DesktopController(OfflineTasksMixin):
             self.service.set_correction_mode(mode)
         except ValueError as error:
             self.correction_actions[self.settings.correction.mode].setChecked(True)
-            QMessageBox.warning(None, "无法启用修正", str(error))
+            QMessageBox.warning(None, ru("无法启用修正"), str(error))
             return
         self.settings = replace(
             self.settings, correction=replace(self.settings.correction, mode=mode)
@@ -602,43 +603,43 @@ class DesktopController(OfflineTasksMixin):
         state = self.service.snapshot().state
         if state in {"error", "stopped"}:
             self.service.start()
-            self.pause_action.setText("暂停")
+            self.pause_action.setText(ru("暂停"))
         elif state in {"paused", "overloaded"}:
             self.service.resume()
-            self.pause_action.setText("继续" if self.service.paused else "暂停")
+            self.pause_action.setText(ru("继续") if self.service.paused else ru("暂停"))
         elif state == "stop_timeout":
             try:
                 self.service.stop(timeout=0.1)
                 self.service.start()
             except (TimeoutError, RuntimeError) as error:
-                QMessageBox.warning(None, "仍在收尾", str(error))
+                QMessageBox.warning(None, ru("仍在收尾"), str(error))
         else:
             self.service.pause()
-            self.pause_action.setText("继续")
+            self.pause_action.setText(ru("继续"))
 
     def toggle_overlay(self) -> None:
         if self.overlay.isVisible():
             self.overlay.hide()
-            self.show_action.setText("显示悬浮窗")
+            self.show_action.setText(ru("显示悬浮窗"))
         else:
             self.overlay.show()
             self.overlay.raise_()
-            self.show_action.setText("隐藏悬浮窗")
+            self.show_action.setText(ru("隐藏悬浮窗"))
 
     def _refresh_devices(self) -> None:
         self.device_menu.clear()
-        output_menu = self.device_menu.addMenu("系统输出")
-        microphone_menu = self.device_menu.addMenu("麦克风")
-        process_menu = self.device_menu.addMenu("指定进程")
+        output_menu = self.device_menu.addMenu(ru("系统输出"))
+        microphone_menu = self.device_menu.addMenu(ru("麦克风"))
+        process_menu = self.device_menu.addMenu(ru("指定进程"))
         try:
             manager = WasapiDeviceManager()
             devices = manager.list_devices()
             microphones = manager.list_microphones()
         except Exception as error:
-            action = self.device_menu.addAction(f"无法读取设备：{error}")
+            action = self.device_menu.addAction(f"{ru('无法读取设备：')}{error}")
             action.setEnabled(False)
             return
-        default = output_menu.addAction("跟随系统默认输出")
+        default = output_menu.addAction(ru("跟随系统默认输出"))
         default.setCheckable(True)
         default.setChecked(
             self.settings.audio.source == "system" and self.settings.audio.device == "default"
@@ -655,7 +656,7 @@ class DesktopController(OfflineTasksMixin):
                 lambda _checked=False, value=device.device_id: self.set_device(value)
             )
 
-        default_mic = microphone_menu.addAction("跟随系统默认麦克风")
+        default_mic = microphone_menu.addAction(ru("跟随系统默认麦克风"))
         default_mic.setCheckable(True)
         default_mic.setChecked(
             self.settings.audio.source == "microphone"
@@ -676,7 +677,7 @@ class DesktopController(OfflineTasksMixin):
         try:
             processes = AudioProcessManager().list_processes()
         except Exception as error:
-            action = process_menu.addAction(f"无法读取进程：{error}")
+            action = process_menu.addAction(f"{ru('无法读取进程：')}{error}")
             action.setEnabled(False)
         else:
             for process in processes:
@@ -715,7 +716,7 @@ class DesktopController(OfflineTasksMixin):
         try:
             self.service.set_audio_source(updated_audio)
         except Exception as error:
-            QMessageBox.warning(None, "无法切换音频源", str(error))
+            QMessageBox.warning(None, ru("无法切换音频源"), str(error))
             return
         self.settings = replace(self.settings, audio=updated_audio)
         persist_settings(
@@ -746,7 +747,7 @@ class DesktopController(OfflineTasksMixin):
     def export_history(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
             None,
-            "导出字幕历史",
+            ru("导出字幕历史"),
             str(self.paths.data_dir / "captions.csv"),
             "CSV (*.csv);;JSON Lines (*.jsonl);;SubRip (*.srt)",
         )
@@ -755,35 +756,32 @@ class DesktopController(OfflineTasksMixin):
         try:
             JsonlHistory(self.paths.history_path).export(path)
         except Exception as error:
-            QMessageBox.critical(None, "导出失败", str(error))
+            QMessageBox.critical(None, ru("导出失败"), str(error))
 
     def remove_local_models(self) -> None:
         if self._offline_is_busy():
             self._warn_offline_busy()
             return
         if self.service.snapshot().recording_state in {"recording", "paused"}:
-            QMessageBox.warning(None, "正在录制", "请先结束录制，再删除本地模型。")
+            QMessageBox.warning(None, ru("正在录制"), ru("请先结束录制，再删除本地模型。"))
             return
         catalog_path = self.paths.resource_dir / "packaging" / "model-catalog.json"
         try:
             profiles = load_model_catalog(catalog_path)
         except Exception as error:
-            QMessageBox.critical(None, "无法读取模型目录", str(error))
+            QMessageBox.critical(None, ru("无法读取模型目录"), str(error))
             return
         answer = QMessageBox.question(
             None,
-            "删除本地模型",
-            "将停止实时翻译并删除受 LinguaRelay 清单管理的语音识别与翻译模型，"
-            "并清理对应下载缓存。\n\n"
-            f"模型目录：{self.model_root}\n\n"
-            "配置、字幕历史和目录中的其他文件会保留。软件将在完成后退出，是否继续？",
+            ru("删除本地模型"),
+            ru("将停止实时翻译并删除受 LinguaRelay 清单管理的语音识别与翻译模型，") + ru("并清理对应下载缓存。\n\n") + f"模型目录：{self.model_root}\n\n" + ru("配置、字幕历史和目录中的其他文件会保留。软件将在完成后退出，是否继续？"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
 
-        self.overlay.set_status("stopping", "正在停止实时翻译并释放模型…")
+        self.overlay.set_status("stopping", ru("正在停止实时翻译并释放模型…"))
         try:
             self.service.stop()
             self.service.release_resources()
@@ -796,16 +794,16 @@ class DesktopController(OfflineTasksMixin):
         except Exception as error:
             QMessageBox.critical(
                 None,
-                "模型删除失败",
-                f"未能安全删除本地模型：{error}\n\n请退出 LinguaRelay 后重试。",
+                ru("模型删除失败"),
+                f"{ru('未能安全删除本地模型：')}{error}" + ru("\n\n请退出 LinguaRelay 后重试。"),
             )
             return
 
-        result = "本地模型和下载缓存已删除。" if removed else "未发现可删除的本地模型。"
+        result = ru("本地模型和下载缓存已删除。") if removed else ru("未发现可删除的本地模型。")
         QMessageBox.information(
             None,
-            "模型已卸载",
-            result + "\n配置与字幕历史已保留；下次启动时可重新安装模型。",
+            ru("模型已卸载"),
+            result + ru("\n配置与字幕历史已保留；下次启动时可重新安装模型。"),
         )
         self.app.quit()
 
@@ -839,15 +837,17 @@ class DesktopController(OfflineTasksMixin):
         if not getattr(sys, "frozen", False) or not uninstaller.is_file():
             QMessageBox.information(
                 None,
-                "卸载 LinguaRelay",
-                "当前运行的不是已安装版本。请在 Windows“设置 → 应用 → 已安装的应用”中"
-                "找到 LinguaRelay，或运行安装目录中的 unins000.exe。",
+                ru("卸载 LinguaRelay"),
+                ru(
+                    "当前运行的不是已安装版本。请在 Windows“设置 → 应用 → 已安装的应用”中"
+                    + "找到 LinguaRelay，或运行安装目录中的 unins000.exe。"
+                ),
             )
             return
         answer = QMessageBox.question(
             None,
-            "卸载 LinguaRelay",
-            "即将退出软件并启动 Windows 卸载程序。是否继续？",
+            ru("卸载 LinguaRelay"),
+            ru("即将退出软件并启动 Windows 卸载程序。是否继续？"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -856,49 +856,51 @@ class DesktopController(OfflineTasksMixin):
         started = QProcess.startDetached(str(uninstaller), [])
         success = started[0] if isinstance(started, tuple) else bool(started)
         if not success:
-            QMessageBox.critical(None, "无法启动卸载程序", str(uninstaller))
+            QMessageBox.critical(None, ru("无法启动卸载程序"), str(uninstaller))
             return
         self.app.quit()
 
     def _update_status_action(self, state: str, message: str) -> None:
         if state != self.service.snapshot().state:
             return
-        self.status_action.setText(f"状态：{message}")
+        message = ru(message)
+        self.status_action.setText(f"{ru('状态：')}{message}")
         self.tray.setToolTip(f"LinguaRelay · {message}")
         paused = state in {"paused", "overloaded", "stop_timeout"}
         self.overlay.set_paused(paused)
         if paused:
-            self.pause_action.setText("继续")
+            self.pause_action.setText(ru("继续"))
         elif state not in {"error", "stopped"}:
-            self.pause_action.setText("暂停")
+            self.pause_action.setText(ru("暂停"))
         if state == "error":
-            self.pause_action.setText("重试启动")
+            self.pause_action.setText(ru("重试启动"))
             self.tray.showMessage("LinguaRelay", message, QSystemTrayIcon.MessageIcon.Critical)
         elif state == "running" and not self._models_ready_notified:
             self._models_ready_notified = True
             self.tray.showMessage(
-                "LinguaRelay 已就绪",
-                "语音识别与翻译模型加载完成，正在监听系统音频。",
+                ru("LinguaRelay 已就绪"),
+                ru("语音识别与翻译模型加载完成，正在监听系统音频。"),
                 QSystemTrayIcon.MessageIcon.Information,
             )
 
     def _update_recording_state(self, state: str, message: str, project_id: object | None) -> None:
         self.overlay.set_recording_state(state)
         active = state in {"recording", "paused"}
-        self.record_action.setText("结束录制" if active else "开始录制")
+        self.record_action.setText(ru("结束录制") if active else ru("开始录制"))
         self.record_pause_action.setEnabled(active)
-        self.record_pause_action.setText("继续录制" if state == "paused" else "暂停录制")
+        self.record_pause_action.setText(ru("继续录制") if state == "paused" else ru("暂停录制"))
         if active:
-            self.tray.setToolTip(f"LinguaRelay · {message}")
+            self.tray.setToolTip(f"LinguaRelay · {ru(message)}")
         viewer = getattr(self, "_offline_workbench", None)
         if viewer is not None:
             viewer.refresh(select_id=str(project_id) if project_id else None)
 
     def _update_correction_status(self, state: str, message: str) -> None:
-        self.correction_status_action.setText(f"修正：{message}")
+        message = ru(message)
+        self.correction_status_action.setText(f"{ru('修正：')}{message}")
         if state == "error":
             self.tray.showMessage(
-                "LinguaRelay 修正",
+                ru("LinguaRelay 修正"),
                 message,
                 QSystemTrayIcon.MessageIcon.Warning,
             )
@@ -910,14 +912,14 @@ class DesktopController(OfflineTasksMixin):
     def _after_start(self) -> None:
         if self.recovered:
             self.tray.showMessage(
-                "LinguaRelay 已恢复",
-                "检测到上次未正常退出；模型临时文件已清理，字幕历史仍保留。",
+                ru("LinguaRelay 已恢复"),
+                ru("检测到上次未正常退出；模型临时文件已清理，字幕历史仍保留。"),
                 QSystemTrayIcon.MessageIcon.Warning,
             )
         if self._recovered_recordings:
             self.tray.showMessage(
-                "LinguaRelay 已恢复录音",
-                f"已从上次异常退出恢复 {len(self._recovered_recordings)} 个录音项目。",
+                ru("LinguaRelay 已恢复录音"),
+                f"{ru('已从上次异常退出恢复 ')}{len(self._recovered_recordings)}{ru(' 个录音项目。')}",
                 QSystemTrayIcon.MessageIcon.Information,
             )
         self.check_updates(manual=False)
@@ -937,19 +939,19 @@ class DesktopController(OfflineTasksMixin):
         self.release_action.setEnabled(True)
         if info.available:
             self.tray.showMessage(
-                "LinguaRelay 有新版本",
-                f"v{info.latest_version} 已发布。请从 GitHub 下载并运行新安装包。",
+                ru("LinguaRelay 有新版本"),
+                f"v{info.latest_version}{ru(' 已发布。请从 GitHub 下载并运行新安装包。')}",
                 QSystemTrayIcon.MessageIcon.Information,
             )
         elif manual:
             self.tray.showMessage(
-                "LinguaRelay 更新",
-                f"当前已是最新版 v{__version__}。",
+                ru("LinguaRelay 更新"),
+                f"{ru('当前已是最新版 v')}{__version__}。",
                 QSystemTrayIcon.MessageIcon.Information,
             )
 
     def _on_update_error(self, message: str) -> None:
-        QMessageBox.warning(None, "检查更新失败", message)
+        QMessageBox.warning(None, ru("检查更新失败"), message)
 
     def open_release_page(self) -> None:
         if self.latest_release_url:
@@ -958,12 +960,8 @@ class DesktopController(OfflineTasksMixin):
     def show_about(self) -> None:
         QMessageBox.about(
             None,
-            "关于 LinguaRelay",
-            f"LinguaRelay v{__version__}\n\n"
-            "实时系统音频翻译字幕\n\n"
-            "制作人：Leeleelee\n"
-            "版权所有 © 2026 Leeleelee\n"
-            "根据 MIT License 开源发布。",
+            ru("关于 LinguaRelay"),
+            f"LinguaRelay v{__version__}\n\n" + ru("实时系统音频翻译字幕\n\n") + ru("制作人：Leeleelee\n") + ru("版权所有 © 2026 Leeleelee\n") + ru("根据 MIT License 开源发布。"),
         )
 
     def shutdown(self) -> None:
