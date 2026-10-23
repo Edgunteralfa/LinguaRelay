@@ -99,6 +99,41 @@ class M2M100Translator:
                 translated, source_code, target_code, inference_ms, cache_hit=False
             )
 
+    def translate_reading(self, text: str, *, source: str = "en", target: str = "ru") -> TranslationResult:
+        """Translate an already shown caption for the local reader.
+
+        Russian is not one of the 12 live speech routes. This call only runs
+        when the user asks to read the current English line.
+        """
+        source_code = normalize_language(source)
+        target_code = target.strip().lower().replace("_", "-")
+        if source_code not in SUPPORTED_LANGUAGES or target_code != "ru" or source_code == "ru":
+            raise ValueError(f"unsupported reading route: {source_code}->{target_code}")
+        normalized_text = text.strip()
+        if not normalized_text:
+            return TranslationResult("", source_code, target_code, 0.0, cache_hit=True)
+        cache_key = (source_code, target_code, normalized_text)
+        with self._lock:
+            cached = self._cache.get(cache_key)
+            if cached is not None:
+                self._cache.move_to_end(cache_key)
+                return TranslationResult(cached, source_code, target_code, 0.0, cache_hit=True)
+            if not self.loaded:
+                self.load()
+            started = time.perf_counter()
+            translated = self._translate_uncached(
+                normalized_text, source=source_code, target=target_code
+            )
+            inference_ms = (time.perf_counter() - started) * 1000
+            if self.settings.cache_size:
+                self._cache[cache_key] = translated
+                self._cache.move_to_end(cache_key)
+                while len(self._cache) > self.settings.cache_size:
+                    self._cache.popitem(last=False)
+            return TranslationResult(
+                translated, source_code, target_code, inference_ms, cache_hit=False
+            )
+
     def _translate_uncached(self, text: str, *, source: str, target: str) -> str:
         assert self._translator is not None and self._tokenizer is not None
         tokenizer = self._tokenizer

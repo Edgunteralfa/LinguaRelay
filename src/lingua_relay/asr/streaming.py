@@ -529,7 +529,18 @@ def _has_sentence_boundary(text: str) -> bool:
 def _is_caption_credit_hallucination(text: str) -> bool:
     """Detect short credit templates Whisper commonly emits over music or silence."""
     normalized = re.sub(r"[\W_]+", "", text, flags=re.UNICODE).casefold()
-    if not normalized or len(normalized) > 64:
+    if not normalized:
+        return False
+    markers = (
+        "pleasedontforget",
+        "rewardsupportmirror",
+        "volunteeredby",
+        "thanksforwatching",
+        "thankyouforwatching",
+    )
+    if any(marker in normalized for marker in markers) and len(normalized) <= 180:
+        return True
+    if len(normalized) > 64:
         return False
     if "zitherharp" in normalized:
         return True

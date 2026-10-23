@@ -64,6 +64,7 @@ class _Bridge(QObject):
     recording = Signal(str, str, object)
     update = Signal(object, bool)
     update_error = Signal(str)
+    reading = Signal(str, str)
 
 
 class _GlobalHotkey(QObject):
@@ -143,6 +144,8 @@ class DesktopController(OfflineTasksMixin):
         self.overlay.workbench_requested.connect(self.show_workbench)
         self.overlay.settings_requested.connect(self.show_settings)
         self.overlay.hide_requested.connect(self.toggle_overlay)
+        self.overlay.reading_requested.connect(self._request_reading)
+        self.bridge.reading.connect(self.overlay.show_reading)
         self.bridge.caption.connect(self._publish_caption)
         self.bridge.transcript.connect(self._publish_transcript)
         self.bridge.status.connect(self._publish_status)
@@ -904,6 +907,18 @@ class DesktopController(OfflineTasksMixin):
                 message,
                 QSystemTrayIcon.MessageIcon.Warning,
             )
+
+    def _request_reading(self, text: str) -> None:
+        self.overlay.show_reading(text, "RU …")
+
+        def worker() -> None:
+            try:
+                russian = self.service.translate_reading(text)
+            except Exception:
+                russian = "не удалось перевести"
+            self.bridge.reading.emit(text, f"RU {russian}")
+
+        threading.Thread(target=worker, name="lingua-relay-reading", daemon=True).start()
 
     def _tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:

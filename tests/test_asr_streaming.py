@@ -302,6 +302,10 @@ def test_completed_partial_is_shown_even_when_a_newer_partial_is_waiting() -> No
 
 
 def test_detects_short_template_caption_credit_hallucinations() -> None:
+    assert _is_caption_credit_hallucination(
+        "Please don't forget to re-subscribe to reward support mirror and point column."
+    )
+    assert _is_caption_credit_hallucination("Volunteered by yankis")
     assert _is_caption_credit_hallucination("字幕制作人 Zither Harp")
     assert _is_caption_credit_hallucination("Subtitles by Example")
     assert _is_caption_credit_hallucination("자막 제작 Example")

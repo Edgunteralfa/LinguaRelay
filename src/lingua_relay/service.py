@@ -85,6 +85,7 @@ class RealtimeCaptionService:
         self._thread: threading.Thread | None = None
         self._asr: StreamingAsrEngine | None = None
         self._mt: StreamingTranslationEngine | None = None
+        self._reading_translator: M2M100Translator | None = None
         self._correction: AsynchronousRevisionEngine | None = None
         self._displayed_segment_id: str | None = None
         self._displayed_revision = 0
@@ -257,6 +258,7 @@ class RealtimeCaptionService:
         self._audio.release_resources()
         self._asr = None
         self._mt = None
+        self._reading_translator = None
         self._correction = None
 
     def snapshot(self) -> ServiceSnapshot:
@@ -279,7 +281,12 @@ class RealtimeCaptionService:
                 self._finals_aborted,
             )
 
-    def start_recording(self, session: RecordingSession) -> None:
+    def translate_reading(self, text: str) -> str:
+        """Translate the caption already on screen into Russian for the local reader."""
+        translator = self._reading_translator
+        if translator is None:
+            raise RuntimeError("translation model is not loaded")
+        return translator.translate_reading(text, source="en", target="ru").text
         self._audio.start_recording(session)
 
     def pause_recording(self) -> None:
@@ -302,6 +309,7 @@ class RealtimeCaptionService:
             translation_settings = self.settings.translation
             translator = M2M100Translator(translation_settings)
             translator.load()
+            self._reading_translator = translator
             if self._stop.is_set():
                 return
             self._set_state("ready", "模型加载完成，正在启动音频捕获…")
@@ -755,13 +763,14 @@ class RealtimeCaptionService:
 
     def _audio_status_message(self, *, prefix: str = "") -> str:
         audio = self.settings.audio
+        model = self.settings.asr.model
         if audio.source == "microphone":
-            label = "正在监听麦克风"
+            label = f"正在监听麦克风 · {model}"
         elif audio.source == "process":
             name = audio.process_name.strip() or f"PID {audio.process_id}"
-            label = f"正在监听进程 {name}"
+            label = f"正在监听进程 {name} · {model}"
         else:
-            label = "正在监听系统音频"
+            label = f"正在监听系统音频 · {model}"
         return prefix + label
 
 

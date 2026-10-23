@@ -94,6 +94,10 @@ def test_overlay_detects_corners_and_enforces_minimum_resize() -> None:
 
     assert overlay.resize_edges_at(QPoint(0, 0)) == overlay._LEFT | overlay._TOP
     assert overlay.resize_edges_at(QPoint(overlay.width() - 1, 90)) == overlay._RIGHT
+    assert (
+        overlay.resize_edges_at(QPoint(overlay.width() - 1, overlay.height() - 1))
+        == overlay._RIGHT | overlay._BOTTOM
+    )
 
     overlay._resize_edges = overlay._LEFT | overlay._TOP
     resized = overlay._resized_geometry(QRect(20, 30, 640, 180), QPoint(900, 900))

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import ctypes
 import sys
 from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QMouseEvent, QShowEvent
+from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -33,18 +34,24 @@ class CaptionOverlay(QWidget):
     workbench_requested = Signal()
     settings_requested = Signal()
     hide_requested = Signal()
+    reading_requested = Signal(str)
 
     _LEFT = 1
     _TOP = 2
     _RIGHT = 4
     _BOTTOM = 8
     _RESIZE_MARGIN = 9
+    _CORNER_GRIP = 28
 
     def __init__(self, settings: OverlaySettings) -> None:
         super().__init__()
         self.settings = settings
         self._last_event: CaptionEvent | None = None
         self._active_segment_id: str | None = None
+        self._recent_lines: list[tuple[str, str]] = []
+        self._reading_source = ""
+        self._reading_text = ""
+        self._press_on_caption = False
         self._press_global: QPoint | None = None
         self._press_geometry: QRect | None = None
         self._resize_edges = 0
@@ -60,6 +67,7 @@ class CaptionOverlay(QWidget):
         self.setObjectName("captionOverlay")
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowTitle("LinguaRelay")
+        self.setMouseTracking(True)
 
     def _build_content(self) -> None:
         self.frame = QFrame(self)
@@ -85,6 +93,8 @@ class CaptionOverlay(QWidget):
         self.history_button.clicked.connect(self.history_requested.emit)
         self.settings_button = self._tool_button(ru("设"), ru("打开用户设置"))
         self.settings_button.clicked.connect(self.settings_requested.emit)
+        self.copy_button = self._tool_button("К", ru("复制当前译文到剪贴板"))
+        self.copy_button.clicked.connect(self.copy_visible_translation)
         self.hide_button = self._tool_button("×", ru("隐藏悬浮窗（Ctrl+Alt+L 恢复）"))
         self.hide_button.clicked.connect(self.hide_requested.emit)
         self.control_buttons = (
@@ -95,6 +105,7 @@ class CaptionOverlay(QWidget):
             self.workbench_button,
             self.history_button,
             self.settings_button,
+            self.copy_button,
             self.hide_button,
         )
         header = QWidget()
@@ -117,6 +128,8 @@ class CaptionOverlay(QWidget):
         content.addWidget(header)
         content.addWidget(self.source)
         content.addWidget(self.translation)
+        self.grip = _CornerGrip(self.frame)
+        self.grip.setToolTip(ru("拖动右下角同时改变宽度和高度"))
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self.frame)
@@ -260,7 +273,9 @@ class CaptionOverlay(QWidget):
         self.source.setVisible(self.settings.display_mode == "bilingual")
         self.source.setStyleSheet(self._text_style(self.settings.source_color, 0.7))
         if new_segment:
-            self.translation.setText(ru("正在翻译…"))
+            preview = [line for _, line in self._recent_lines]
+            preview.append(ru("正在翻译…"))
+            self._set_caption_text(preview[-4:])
             self.translation.setStyleSheet(self._text_style(self.settings.translation_color, 0.65))
         route = f"{event.language.upper()} → {target_language.upper()}"
         self.set_status("processing", route + ru(" · 正在识别并翻译"))
@@ -274,11 +289,14 @@ class CaptionOverlay(QWidget):
         fallback = not translated
         self.source.setText(source)
         if translated:
-            self.translation.setText(translated)
+            self._show_translation(event.segment_id, translated)
         elif self.settings.display_mode == "translated":
-            self.translation.setText(source)
+            lines = [line for _, line in self._recent_lines]
+            if not lines or self._recent_lines[-1][0] != event.segment_id:
+                lines.append(source)
+            self._set_caption_text(lines[-4:])
         else:
-            self.translation.setText("")
+            self._set_caption_text([line for _, line in self._recent_lines])
         if event.state == "partial":
             self.source.setStyleSheet(self._text_style(self.settings.source_color, 0.62))
             self.translation.setStyleSheet(self._text_style(self.settings.translation_color, 0.72))
@@ -303,10 +321,58 @@ class CaptionOverlay(QWidget):
         self._retention_timer.stop()
         self._last_event = None
         self._active_segment_id = None
+        self._recent_lines.clear()
+        self._reading_source = ""
+        self._reading_text = ""
         self.source.clear()
         self.translation.clear()
         self.status.setText(ru("LINGUARELAY · 等待系统音频"))
         self.status.setStyleSheet("color: #77d6a5;")
+
+    def _show_translation(self, segment_id: str, text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+        if self._recent_lines and self._recent_lines[-1][0] == segment_id:
+            self._recent_lines[-1] = (segment_id, text)
+        else:
+            self._recent_lines.append((segment_id, text))
+            del self._recent_lines[:-4]
+        self._set_caption_text([line for _, line in self._recent_lines])
+        if len(self._recent_lines) >= 2 and self.height() < 260:
+            self.resize(self.width(), 260)
+            if self._positioned:
+                self._commit_geometry()
+
+    def show_reading(self, source: str, text: str) -> None:
+        self._reading_source = source
+        self._reading_text = text
+        self._set_caption_text([line for _, line in self._recent_lines])
+
+    def _set_caption_text(self, lines: list[str]) -> None:
+        body = "\n".join(lines)
+        english = "\n".join(line for _, line in self._recent_lines)
+        if self._reading_text and self._reading_source == english and body == english:
+            body = f"{english}\n\n{self._reading_text}"
+        self.translation.setText(body)
+
+    def _caption_clicked(self, local: QPoint) -> bool:
+        origin = self.translation.mapTo(self, QPoint(0, 0))
+        return QRect(origin, self.translation.size()).contains(local)
+
+    def copy_visible_translation(self) -> None:
+        """Copy the English lines on screen so they can be pasted into a translator."""
+        text = "\n".join(line for _, line in self._recent_lines).strip()
+        if not text:
+            text = self.translation.text().strip()
+        placeholders = {
+            ru("正在翻译…"),
+            ru("正在加载模型…"),
+            ru("模型已就绪，等待系统音频…"),
+        }
+        if not text or text in placeholders:
+            return
+        QApplication.clipboard().setText(text)
 
     def _arm_retention_timer(self) -> None:
         seconds = self.settings.retention_seconds
@@ -361,6 +427,11 @@ class CaptionOverlay(QWidget):
 
     def resize_edges_at(self, point: QPoint) -> int:
         """Return the active resize edge mask for a local window position."""
+        if (
+            point.x() >= self.width() - self._CORNER_GRIP
+            and point.y() >= self.height() - self._CORNER_GRIP
+        ):
+            return self._RIGHT | self._BOTTOM
         edges = 0
         if point.x() <= self._RESIZE_MARGIN:
             edges |= self._LEFT
@@ -401,6 +472,7 @@ class CaptionOverlay(QWidget):
         self._press_global = event.globalPosition().toPoint()
         self._press_geometry = self.geometry()
         self._resize_edges = self.resize_edges_at(local)
+        self._press_on_caption = not self._resize_edges and self._caption_clicked(local)
         if not self._resize_edges:
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
         event.accept()
@@ -423,12 +495,25 @@ class CaptionOverlay(QWidget):
     def _pointer_release(self, event: QMouseEvent) -> bool:
         if event.button() != Qt.MouseButton.LeftButton or self._press_global is None:
             return False
+        press_global = self._press_global
         self._press_global = None
         self._press_geometry = None
+        moved = event.globalPosition().toPoint() - press_global
+        caption_click = (
+            self._press_on_caption
+            and not self._resize_edges
+            and abs(moved.x()) < 6
+            and abs(moved.y()) < 6
+        )
         self._resize_edges = 0
+        self._press_on_caption = False
         self.unsetCursor()
         self._keep_on_screen()
         self._commit_geometry()
+        if caption_click:
+            text = "\n".join(line for _, line in self._recent_lines).strip()
+            if text:
+                self.reading_requested.emit(text)
         event.accept()
         return True
 
@@ -491,14 +576,51 @@ class CaptionOverlay(QWidget):
         )
         self.geometry_changed.emit(geometry.x(), geometry.y(), geometry.width(), geometry.height())
 
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if hasattr(self, "grip"):
+            self.grip.move(
+                self.frame.width() - self.grip.width(),
+                self.frame.height() - self.grip.height(),
+            )
+            self.grip.raise_()
+
     def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
         if not self._positioned:
             self.reposition()
         super().showEvent(event)
+        self._exclude_from_screen_capture()
+
+    def _exclude_from_screen_capture(self) -> None:
+        """Keep the overlay visible locally while Windows screen share omits it."""
+        if sys.platform != "win32":
+            return
+        exclude_from_capture = 0x00000011
+        hwnd = int(self.winId())
+        if hwnd == 0:
+            return
+        ctypes.windll.user32.SetWindowDisplayAffinity(hwnd, exclude_from_capture)
 
 
 def _rgba(color: QColor) -> str:
     return f"rgba({color.red()}, {color.green()}, {color.blue()}, {color.alpha()})"
+
+
+class _CornerGrip(QWidget):
+    """Resize mark drawn flush with the overlay's bottom-right pixel."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setFixedSize(14, 14)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+    def paintEvent(self, _event: QShowEvent) -> None:  # noqa: N802
+        painter = QPainter(self)
+        painter.setPen(QPen(QColor(255, 255, 255, 200), 1))
+        edge = self.width() - 1
+        for offset in (1, 5, 9):
+            painter.drawLine(edge - offset, edge, edge, edge - offset)
 
 
 def run_demo(settings: Settings) -> int:

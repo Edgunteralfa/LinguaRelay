@@ -5,11 +5,14 @@ import threading
 from dataclasses import replace
 from pathlib import Path
 
+from collections import OrderedDict
+
 import pytest
 
 from lingua_relay.asr.types import AsrEvent
 from lingua_relay.config import TranslationSettings
 from lingua_relay.history import JsonlHistory
+from lingua_relay.mt.m2m100 import M2M100Translator
 from lingua_relay.mt.streaming import StreamingTranslationEngine
 from lingua_relay.mt.types import TranslationResult
 from lingua_relay.telemetry import TraceCollector
@@ -172,3 +175,24 @@ def test_completed_partial_translation_is_shown_while_newer_text_waits() -> None
     assert first.revision == 1
     assert first.translated_text == "zh:first"
     assert engine.snapshot().stale_results_dropped == 0
+
+
+def test_reading_translation_can_target_russian_outside_live_routes() -> None:
+    translator = M2M100Translator.__new__(M2M100Translator)
+    translator.settings = TranslationSettings()
+    translator._lock = threading.RLock()
+    translator._cache = OrderedDict()
+    translator._translator = object()
+    seen: dict[str, tuple[str, str]] = {}
+
+    def fake(text: str, *, source: str, target: str) -> str:
+        seen["pair"] = (source, target)
+        return f"ru:{text}"
+
+    translator._translate_uncached = fake  # type: ignore[method-assign]
+    result = translator.translate_reading("server latency")
+    assert result.text == "ru:server latency"
+    assert result.target == "ru"
+    assert seen["pair"] == ("en", "ru")
+    with pytest.raises(ValueError, match="unsupported translation route"):
+        translator.translate("server latency", source="en", target="ru")
