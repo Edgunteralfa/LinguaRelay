@@ -307,6 +307,7 @@ def test_detects_short_template_caption_credit_hallucinations() -> None:
     )
     assert _is_caption_credit_hallucination("Volunteered by yankis")
     assert _is_caption_credit_hallucination("YOYO")
+    assert _is_caption_credit_hallucination("The yoyo television series exclusive")
     assert _is_caption_credit_hallucination("Yo yo!")
     assert _is_caption_credit_hallucination("Yankees")
     assert _is_caption_credit_hallucination("Thanks for everyone")

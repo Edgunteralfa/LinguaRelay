@@ -539,6 +539,7 @@ def _is_caption_credit_hallucination(text: str) -> bool:
         "thankyouforwatching",
         "thanksforeveryone",
         "thankseveryone",
+        "yoyotelevisionseries",
     )
     if any(marker in normalized for marker in markers):
         return True
