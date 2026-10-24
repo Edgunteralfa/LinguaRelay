@@ -306,6 +306,14 @@ def test_detects_short_template_caption_credit_hallucinations() -> None:
         "Please don't forget to re-subscribe to reward support mirror and point column."
     )
     assert _is_caption_credit_hallucination("Volunteered by yankis")
+    assert _is_caption_credit_hallucination("YOYO")
+    assert _is_caption_credit_hallucination("Yo yo!")
+    assert _is_caption_credit_hallucination("Yankees")
+    assert _is_caption_credit_hallucination("Thanks for everyone")
+    assert _is_caption_credit_hallucination(
+        "Please don't forget to re-subscribe to reward support mirror and point column"
+    )
+    assert not _is_caption_credit_hallucination("The Yankees won the series.")
     assert _is_caption_credit_hallucination("字幕制作人 Zither Harp")
     assert _is_caption_credit_hallucination("Subtitles by Example")
     assert _is_caption_credit_hallucination("자막 제작 Example")

@@ -9,6 +9,8 @@
 - 验证：界面模块可以编译；每条 `ru("…")` 常量都有译文。本机没有项目 `.venv` 和 PySide6，`tests/test_overlay.py` 与 `tests/test_desktop_delivery.py` 已改期望文案，但没有实际跑过。
 - 2026-10-24 已创建本地 `.venv` 并安装 `.[runtime]`（Python 3.11）。启动入口是仓库根目录的 `LinguaRelay.bat`，命令为 `.venv\Scripts\lingua-relay app`。未做真实设备长测。
 - 未解决：没有打包，没有在真实 VooV 上试过。用系统输出捕获对方中文、源语言选手动中文、目标语言选英语，才能边听边看英语。
+- 2026-10-24：实时切段静音从 640/320 ms 改为 1.8 秒，避免问句中的停顿被当成结束。需重启后生效。句末标点和 6 秒硬上限仍会切段。
+- 2026-10-24：幻觉过滤增加整行仅由 YOYO / Yankees / yankis 组成的短模板，以及 «Thanks for everyone». «Please don't forget to re-subscribe…» 在识别和译文上都会丢掉，即使它粘在更长的一行后面。含 Yankees 的正常句子不删除。需重启后生效。
 - 2026-10-24：俄文阅读改由译文左侧 RU 色条触发。短按英文单词把该词发到 `127.0.0.1:47631`。用户确认点击能命中所按单词，并被实验分支 BestPerformance `experiment/lingua-word-search` 的已构建 Windows 程序填入搜索。对方未监听时状态行显示 «BP не слушает」。
 - 2026-10-24 本地未提交：悬浮窗保留最近 4 条译文；状态带上 ASR 模型名；幻觉过滤增加 re-subscribe / Volunteered by / thanks for watching。悬浮窗右下角可对角缩放，按钮 К 复制译文。Windows 上悬浮窗使用 WDA_EXCLUDEFROMCAPTURE，演示屏幕时不进入采集，本机仍可见。界面测试未覆盖真实 VooV 采集。
 

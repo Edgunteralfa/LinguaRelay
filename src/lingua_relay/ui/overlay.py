@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from lingua_relay.asr.streaming import _is_caption_credit_hallucination
 from lingua_relay.asr.types import AsrEvent
 from lingua_relay.config import OverlaySettings, Settings
 from lingua_relay.events import CaptionEvent
@@ -301,6 +302,9 @@ class CaptionOverlay(QWidget):
         source = event.text.strip()
         if not source:
             return
+        if _is_caption_credit_hallucination(source):
+            self._drop_segment(event.segment_id)
+            return
         new_segment = event.segment_id != self._active_segment_id
         self._active_segment_id = event.segment_id
         self.source.setText(source)
@@ -320,6 +324,9 @@ class CaptionOverlay(QWidget):
         self._active_segment_id = event.segment_id
         translated = event.translated_text.strip()
         source = event.source_text.strip()
+        if _is_caption_credit_hallucination(translated) or _is_caption_credit_hallucination(source):
+            self._drop_segment(event.segment_id)
+            return
         fallback = not translated
         self.source.setText(source)
         if translated:
@@ -349,6 +356,13 @@ class CaptionOverlay(QWidget):
         self.set_status("error" if fallback else "running", route + suffix)
         self.source.setVisible(self.settings.display_mode == "bilingual")
         self._arm_retention_timer()
+
+    def _drop_segment(self, segment_id: str) -> None:
+        self._recent_lines = [item for item in self._recent_lines if item[0] != segment_id]
+        if self._active_segment_id == segment_id:
+            self._active_segment_id = None
+        self.source.clear()
+        self._set_caption_text([line for _, line in self._recent_lines])
 
     def clear_caption(self) -> None:
         """Clear expired text without hiding or moving the overlay."""

@@ -537,12 +537,19 @@ def _is_caption_credit_hallucination(text: str) -> bool:
         "volunteeredby",
         "thanksforwatching",
         "thankyouforwatching",
+        "thanksforeveryone",
+        "thankseveryone",
     )
-    if any(marker in normalized for marker in markers) and len(normalized) <= 180:
+    if any(marker in normalized for marker in markers):
         return True
     if len(normalized) > 64:
         return False
     if "zitherharp" in normalized:
+        return True
+    short_tokens = ("yoyo", "yankees", "yankee", "yankis", "yanki")
+    if len(normalized) <= 24 and any(
+        normalized == token * (len(normalized) // len(token)) for token in short_tokens
+    ):
         return True
     prefixes = (
         "字幕制作人",

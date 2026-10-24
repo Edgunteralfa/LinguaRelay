@@ -78,8 +78,8 @@ class AsrSettings:
     vad_enabled: bool = True
     vad_threshold: float = 0.5
     min_speech_ms: int = 320
-    min_silence_ms: int = 640
-    preferred_silence_ms: int = 320
+    min_silence_ms: int = 1800
+    preferred_silence_ms: int = 1800
     partial_interval_ms: int = 320
     adaptive_partial_enabled: bool = True
     punctuation_boundary_enabled: bool = True
