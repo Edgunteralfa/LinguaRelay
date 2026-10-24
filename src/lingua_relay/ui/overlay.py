@@ -1,16 +1,29 @@
 from __future__ import annotations
 
 import ctypes
+import socket
 import sys
 from dataclasses import replace
 
-from PySide6.QtCore import QEvent, QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QResizeEvent, QShowEvent
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, QTimer, Signal
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QResizeEvent,
+    QShowEvent,
+    QTextCursor,
+    QTextDocument,
+    QTextOption,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QSizePolicy,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -51,8 +64,8 @@ class CaptionOverlay(QWidget):
         self._recent_lines: list[tuple[str, str]] = []
         self._reading_source = ""
         self._reading_text = ""
-        self._press_on_caption = False
         self._press_global: QPoint | None = None
+        self._press_local: QPoint | None = None
         self._press_geometry: QRect | None = None
         self._resize_edges = 0
         self._positioned = False
@@ -119,15 +132,35 @@ class CaptionOverlay(QWidget):
         self.source.setWordWrap(True)
         self.translation = QLabel(ru("正在加载模型…"))
         self.translation.setWordWrap(True)
+        self.translation.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.reading_strip = QToolButton()
+        self.reading_strip.setText("RU")
+        self.reading_strip.setFixedWidth(22)
+        self.reading_strip.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        self.reading_strip.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.reading_strip.setToolTip(ru("点击色条，把当前可见英文译成俄文"))
+        self.translation.setToolTip(ru("点击英文单词，送入 BestPerformance 搜索"))
+        self.reading_strip.setStyleSheet(
+            "QToolButton { color: white; background: #2f6f9f; border: 0; "
+            "border-radius: 3px; font-size: 10px; font-weight: 700; padding: 0; }"
+            "QToolButton:hover { background: #3d86bf; }"
+        )
+        self.reading_strip.clicked.connect(self._emit_reading)
+        translation_row = QWidget()
+        translation_layout = QHBoxLayout(translation_row)
+        translation_layout.setContentsMargins(0, 0, 0, 0)
+        translation_layout.setSpacing(8)
+        translation_layout.addWidget(self.reading_strip)
+        translation_layout.addWidget(self.translation, 1)
         for label in (self.status, self.source, self.translation):
             label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
         content = QVBoxLayout(self.frame)
-        content.setContentsMargins(22, 14, 22, 15)
+        content.setContentsMargins(14, 14, 22, 15)
         content.setSpacing(5)
         content.addWidget(header)
         content.addWidget(self.source)
-        content.addWidget(self.translation)
+        content.addWidget(translation_row)
         self.grip = _CornerGrip(self.frame)
         self.grip.setToolTip(ru("拖动右下角同时改变宽度和高度"))
         root = QVBoxLayout(self)
@@ -162,6 +195,7 @@ class CaptionOverlay(QWidget):
         self.display_button.setText(ru("双") if settings.display_mode == "bilingual" else ru("译"))
         for button in self.control_buttons:
             button.setVisible(not settings.click_through)
+        self.reading_strip.setVisible(not settings.click_through)
         self.record_pause_button.setVisible(
             not settings.click_through and self.record_button.property("recording") is True
         )
@@ -356,9 +390,49 @@ class CaptionOverlay(QWidget):
             body = f"{english}\n\n{self._reading_text}"
         self.translation.setText(body)
 
-    def _caption_clicked(self, local: QPoint) -> bool:
-        origin = self.translation.mapTo(self, QPoint(0, 0))
-        return QRect(origin, self.translation.size()).contains(local)
+    def _word_at_caption(self, local: QPoint) -> str:
+        english = "\n".join(line for _, line in self._recent_lines).strip()
+        if not english:
+            return ""
+        contents = self.translation.contentsRect()
+        origin = self.translation.mapTo(self, contents.topLeft())
+        if not QRect(origin, contents.size()).contains(local):
+            return ""
+        document = QTextDocument()
+        document.setDocumentMargin(0)
+        document.setDefaultFont(self.translation.font())
+        option = document.defaultTextOption()
+        option.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        document.setDefaultTextOption(option)
+        document.setTextWidth(contents.width())
+        document.setPlainText(self.translation.text())
+        relative = QPointF(local.x() - origin.x(), local.y() - origin.y())
+        if relative.y() > document.size().height():
+            return ""
+        position = document.documentLayout().hitTest(relative, Qt.HitTestAccuracy.ExactHit)
+        if position < 0 or position >= len(english):
+            return ""
+        cursor = QTextCursor(document)
+        cursor.setPosition(position)
+        cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+        word = cursor.selectedText().strip(" \t.,;:!?\"'“”()[]")
+        if len(word) < 2 or not word.isascii() or not any(char.isalpha() for char in word):
+            return ""
+        return word
+
+    def _send_word_to_bp(self, word: str) -> None:
+        try:
+            with socket.create_connection(("127.0.0.1", 47631), 0.3) as link:
+                link.sendall(word.encode("ascii"))
+        except OSError:
+            self.status.setText("LINGUARELAY · BP не слушает")
+            return
+        self.status.setText(f"LINGUARELAY · BP · {word}")
+
+    def _emit_reading(self) -> None:
+        text = "\n".join(line for _, line in self._recent_lines).strip()
+        if text:
+            self.reading_requested.emit(text)
 
     def copy_visible_translation(self) -> None:
         """Copy the English lines on screen so they can be pasted into a translator."""
@@ -470,9 +544,9 @@ class CaptionOverlay(QWidget):
         if self.settings.click_through or event.button() != Qt.MouseButton.LeftButton:
             return False
         self._press_global = event.globalPosition().toPoint()
+        self._press_local = local
         self._press_geometry = self.geometry()
         self._resize_edges = self.resize_edges_at(local)
-        self._press_on_caption = not self._resize_edges and self._caption_clicked(local)
         if not self._resize_edges:
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
         event.accept()
@@ -496,24 +570,25 @@ class CaptionOverlay(QWidget):
         if event.button() != Qt.MouseButton.LeftButton or self._press_global is None:
             return False
         press_global = self._press_global
+        press_local = self._press_local
         self._press_global = None
+        self._press_local = None
         self._press_geometry = None
         moved = event.globalPosition().toPoint() - press_global
-        caption_click = (
-            self._press_on_caption
+        word_click = (
+            press_local is not None
             and not self._resize_edges
             and abs(moved.x()) < 6
             and abs(moved.y()) < 6
         )
         self._resize_edges = 0
-        self._press_on_caption = False
         self.unsetCursor()
         self._keep_on_screen()
         self._commit_geometry()
-        if caption_click:
-            text = "\n".join(line for _, line in self._recent_lines).strip()
-            if text:
-                self.reading_requested.emit(text)
+        if word_click:
+            word = self._word_at_caption(press_local)
+            if word:
+                self._send_word_to_bp(word)
         event.accept()
         return True
 
